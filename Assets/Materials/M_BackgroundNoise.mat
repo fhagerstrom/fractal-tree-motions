@@ -46,9 +46,9 @@ Material:
     - _NoiseStrength: 0.1
     - _ZWrite: 0
     m_Colors:
-    - _BottomColor: {r: 0.5, g: 0.7, b: 1, a: 1}
+    - _BottomColor: {r: 0.5613208, g: 0.73402923, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _TopColor: {r: 0.09999997, g: 0.19999996, b: 0.5, a: 1}
+    - _TopColor: {r: 0.6509434, g: 0, b: 0.5489551, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

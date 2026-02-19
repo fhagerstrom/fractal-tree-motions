@@ -181,7 +181,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 6
+  orthographic size: 5
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -402,7 +402,7 @@ MonoBehaviour:
   m_LightType: 4
   m_BlendStyleIndex: 0
   m_FalloffIntensity: 0.5
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 0.72156864, a: 1}
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
@@ -485,19 +485,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abe69896ada2fda44910ed42b12b2c7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FractalTreeTest
-  maxDepth: 12
+  currentWindModel: 0
+  maxDepth: 6
   initialLength: 2
-  lengthScale: 0.7
+  lengthScale: 0.75
   branchAngle: 30
-  branchWidth: 0.05
+  branchWidth: 0.1
   widthScaleByDepth: 0.75
-  angleNoiseScale: 25
-  lengthNoiseScale: 0.5
-  noiseFrequency: 0.5
   seed: 0
-  swayAmplitude: 10
+  randomizeSeed: 1
+  angleNoiseScale: 30
+  lengthNoiseScale: 0.75
+  noiseFrequency: 0.9
+  sineAmplitude: 5
   swayFrequency: 0.1
   depthAmplitudeScale: 0.8
+  windDirection: {x: 1, y: 0}
+  noiseAmplitude: 2
+  scalarWindDepthScale: 0.8
+  windSpatialFrequency: 0.5
+  windSpeed: 0.3
+  windStrength: 2
+  vectorWindAmplitude: 1.5
+  vectorWindDepthScale: 0.25
+  vectorWindSpatialFrequency: 0.75
+  vectorWindSpeed: 0.75
 --- !u!4 &468283343
 Transform:
   m_ObjectHideFlags: 0

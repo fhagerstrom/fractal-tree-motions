@@ -16,6 +16,6 @@ public class TreeBranch
     public float depth;
 
     // Calculate end point based on start, angle, and length
-    public Vector2 End => start + new Vector2(Mathf.Cos(currentAngle), Mathf.Sin(currentAngle)) * length;
+    public Vector2 end => start + new Vector2(Mathf.Cos(currentAngle), Mathf.Sin(currentAngle)) * length;
 
 }
