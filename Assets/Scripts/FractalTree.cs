@@ -14,7 +14,7 @@ public enum WindModel
 public class FractalTree : MonoBehaviour
 {
     [Header("Components")]
-    private TreeBranch root;
+    public TreeBranch root;
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Mesh treeMesh;
@@ -113,18 +113,26 @@ public class FractalTree : MonoBehaviour
     void BuildTreeMesh(TreeBranch root)
     {
         List<Vector3> vertices = new List<Vector3>();
+        List<Vector3> normals = new List<Vector3>();
         List<int> triangles = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
+
+        vertices.Clear();
+        triangles.Clear();
+        uvs.Clear();
 
         // Add branch segments recursively (fills vertices and triangle indices)
-        AddBranchRecursive(root, vertices, triangles);
+        AddBranchRecursive(root, vertices, triangles, uvs, normals);
+
         treeMesh.Clear();
         treeMesh.SetVertices(vertices);
         treeMesh.SetTriangles(triangles, 0);
+        treeMesh.SetUVs(0, uvs);
+        treeMesh.SetNormals(normals);
         treeMesh.RecalculateBounds();
-        treeMesh.RecalculateNormals();
     }
 
-    void AddBranchRecursive(TreeBranch branch, List<Vector3> vertices, List<int> triangles)
+    void AddBranchRecursive(TreeBranch branch, List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Vector3> normals)
     { 
         if (branch == null) 
             return;
@@ -134,12 +142,12 @@ public class FractalTree : MonoBehaviour
         Vector2 end = branch.end;
 
         Vector2 direction = (end - start).normalized;
-        Vector2 normal = new Vector2(-direction.y, direction.x); // Perpendicular to the branch direction
+        Vector2 normal2D = new Vector2(-direction.y, direction.x); // Perpendicular to the branch direction
 
         float width = branchWidth * Mathf.Pow(widthScaleByDepth, branch.depth); // Decrease width with depth
         width = Mathf.Max(width, 0.01f); // Define minimum width to prevent infinite tapering
 
-        Vector2 offset = normal * width; // Offset for the quad vertices on either side of the branch centerline
+        Vector2 offset = normal2D * width; // Offset for the quad vertices on either side of the branch centerline
 
         int vertexIndex = vertices.Count;
 
@@ -147,6 +155,11 @@ public class FractalTree : MonoBehaviour
         vertices.Add(start - offset); // Right vertex at start
         vertices.Add(end + offset); // Left vertex at end
         vertices.Add(end - offset); // Right vertex at end
+
+        normals.Add(normal2D);
+        normals.Add(normal2D);
+        normals.Add(normal2D);
+        normals.Add(normal2D);
 
         // Form a quad with two triangles: (v0, v2, v1) and (v2, v3, v1)
         triangles.Add(vertexIndex + 0);
@@ -157,9 +170,14 @@ public class FractalTree : MonoBehaviour
         triangles.Add(vertexIndex + 2);
         triangles.Add(vertexIndex + 3);
 
+        uvs.Add(new Vector2(0, 0));
+        uvs.Add(new Vector2(1, 0));
+        uvs.Add(new Vector2(0, 1));
+        uvs.Add(new Vector2(1, 1));
+
         foreach (var child in branch.childBranches)
         {
-            AddBranchRecursive(child, vertices, triangles);
+            AddBranchRecursive(child, vertices, triangles, uvs, normals);
         }
     }
 
@@ -288,22 +306,6 @@ public class FractalTree : MonoBehaviour
 
         offset = bend * ampRadius;
         offset *= stiffness;
-
-        //if (branch.depth > 0) // Exclude trunk
-        //{ 
-        //    float ampRadius = vectorWindAmplitude * Mathf.Pow(vectorWindDepthScale, branch.depth) * Mathf.Deg2Rad; // Base amplitude scaled by depth
-
-        //    Vector2 branchDirection = (branch.end - branch.start).normalized; // Define direction
-        //    Vector2 branchNormal = new Vector2(-branchDirection.y, branchDirection.x); // Make sure it's perpendicular
-
-        //    // Sample vector wind field at branch position
-        //    Vector2 vectorWind = SampleVectorWind(branch.start);
-
-        //    // Project wind onto normal for bending
-        //    float bend = Vector2.Dot(vectorWind, branchNormal);
-
-        //    offset = bend * ampRadius;
-        //}
 
         branch.currentAngle = branch.baseAngle + offset;
 

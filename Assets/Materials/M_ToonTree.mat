@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_TreeBase
-  m_Shader: {fileID: 10753, guid: 0000000000000000f000000000000000, type: 0}
+  m_Name: M_ToonTree
+  m_Shader: {fileID: 4800000, guid: 048283a4165c6e340bcacb23e81196a5, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -25,6 +25,10 @@ Material:
     m_TexEnvs:
     - _AlphaTex:
         m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 9a3155261fe58684aa9ba58049c913fa, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -91,17 +95,22 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _Smoothness: 0.02
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _Threshold: 0.5
+    - _TreeEdgeSmoothness: 0.25
     - _UVSec: 0
     - _WindQuality: 0
     - _ZWrite: 1
     m_Colors:
+    - _BaseColor: {r: 0.05678178, g: 0.41509432, b: 0.22039486, a: 1}
     - _Color: {r: 0.2941177, g: 0, b: 0.509804, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ShadowColor: {r: 0.049999982, g: 0.049999982, b: 0.049999982, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
