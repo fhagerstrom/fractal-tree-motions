@@ -11,6 +11,7 @@ public enum WindModel
 }
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+// [ExecuteInEditMode]
 public class FractalTree : MonoBehaviour
 {
     [Header("Components")]
@@ -56,19 +57,24 @@ public class FractalTree : MonoBehaviour
     [HideInInspector] public float vectorWindSpatialFrequency = 0.5f; // How quickly the noise changes across space
     [HideInInspector] public float vectorWindSpeed = 0.5f; // How quickly the noise changes across space
 
+    const int MAX_BRANCHES = 512;
+
+    Vector4[] branchDataA = new Vector4[MAX_BRANCHES]; // start.xy, end.xy
+    Vector4[] branchDataB = new Vector4[MAX_BRANCHES]; // radius, depth, unused, unused
+    int branchCount = 0;
+
 
     void Start()
     {
-        // lineRenderer = GetComponent<LineRenderer>();
         meshFilter = GetComponent<MeshFilter>();    
         meshRenderer = GetComponent<MeshRenderer>();
 
         treeMesh = GetComponent<Mesh>();
 
-        treeMesh = new Mesh();
+        // treeMesh = new Mesh();
 
-        treeMesh.name = "FractalTreeMesh";
-        meshFilter.mesh = treeMesh;
+        //treeMesh.name = "FractalTreeMesh";
+        //meshFilter.mesh = treeMesh;
 
         if (randomizeSeed == true)
             seed = Random.Range(0, 10000); // Randomize seed for different tree shapes each run
@@ -105,10 +111,38 @@ public class FractalTree : MonoBehaviour
         //SinusoidalAnimation(root);
         //NoiseWindAnimation(root);
 
-        BuildTreeMesh(root);
-        DebugDrawBranch(root); // Debug draw the tree for visualization
+        // BuildTreeMesh(root);
+
+        // SDF approach - collect branch data into arrays and pass to shader for rendering
+        branchCount = 0;
+        CollectBranches(root);
+
+        Debug.Log("Branch Count: " + branchCount);
+
+        meshRenderer.sharedMaterial.SetInt("_BranchCount", branchCount);
+        meshRenderer.sharedMaterial.SetVectorArray("_BranchDataA", branchDataA); // xy = start, zw = end
+        meshRenderer.sharedMaterial.SetVectorArray("_BranchDataB", branchDataB); // x = radius, y/z/w unused for now but could store other params
+
+        // DebugDrawBranch(root); // Debug draw the tree for visualization
     }
 
+    public void RegenerateTree()
+    {
+        if (randomizeSeed == true)
+            seed = Random.Range(0, 10000); // Randomize seed for different tree shapes each run
+
+        root = GenerateBranch(null, new Vector2(0, -2), Mathf.PI / 2f, 0);
+        BuildTreeMesh(root);
+    }
+
+    // Regenerate the tree if parameters changes.
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        // RegenerateTree();
+    }
 
     void BuildTreeMesh(TreeBranch root)
     {
@@ -122,7 +156,7 @@ public class FractalTree : MonoBehaviour
         uvs.Clear();
 
         // Add branch segments recursively (fills vertices and triangle indices)
-        AddBranchRecursive(root, vertices, triangles, uvs, normals);
+        AddBranchMesh(root, vertices, triangles, uvs, normals);
 
         treeMesh.Clear();
         treeMesh.SetVertices(vertices);
@@ -132,7 +166,7 @@ public class FractalTree : MonoBehaviour
         treeMesh.RecalculateBounds();
     }
 
-    void AddBranchRecursive(TreeBranch branch, List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Vector3> normals)
+    void AddBranchMesh(TreeBranch branch, List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, List<Vector3> normals)
     { 
         if (branch == null) 
             return;
@@ -177,7 +211,7 @@ public class FractalTree : MonoBehaviour
 
         foreach (var child in branch.childBranches)
         {
-            AddBranchRecursive(child, vertices, triangles, uvs, normals);
+            AddBranchMesh(child, vertices, triangles, uvs, normals);
         }
     }
 
@@ -187,7 +221,10 @@ public class FractalTree : MonoBehaviour
         // Length noise
         float baseLength = initialLength * Mathf.Pow(lengthScale, depth);
 
-        float lengthNoise = Mathf.PerlinNoise((depth * seed) * noiseFrequency, 0f);
+        float lengthNoise = Mathf.PerlinNoise(depth * noiseFrequency, 0f);
+
+        if (randomizeSeed == true)
+            lengthNoise = Mathf.PerlinNoise((depth * Random.Range(0, seed)) * noiseFrequency, 0f);
 
         float lengthVariation = 1f + (lengthNoise - 0.5f) * 2f * lengthNoiseScale;
         float length = baseLength * lengthVariation;
@@ -222,6 +259,27 @@ public class FractalTree : MonoBehaviour
         }
 
         return branch;
+
+    }
+
+    // Store branch data in arrays for GPU processing. Trying out SDF approach.
+    void CollectBranches(TreeBranch branch)
+    {
+        if (branch == null || branchCount >= MAX_BRANCHES)
+            return;
+
+        float width = branchWidth * Mathf.Pow(widthScaleByDepth, branch.depth);
+        width = Mathf.Max(width, 0.01f); // Ensure minimum width
+
+        // Store branch data in arrays for GPU processing
+        branchDataA[branchCount] = new Vector4(branch.start.x, branch.start.y, branch.end.x, branch.end.y);
+        branchDataB[branchCount] = new Vector4(width, branch.depth, 0, 0);
+        branchCount++;
+
+        foreach (var child in branch.childBranches)
+        {
+            CollectBranches(child);
+        }
 
     }
 
