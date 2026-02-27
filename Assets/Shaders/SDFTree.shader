@@ -2,15 +2,12 @@ Shader "Custom/SDFTree"
 {
     Properties
     {
-        // // _BaseMap("Base Map", 2D) = "white" {}
-        // _Threshold("Threshold", Range(0, 1)) = 0.5
-        // _Smoothness("Band Smoothness", Range(0.001, 0.2)) = 0.02
-        // _BranchCount("Branch Count", Range(1, 256)) = 256
-
         _TreeScale("Tree Scale", Float) = 1.0
         _LeafScale("Leaf Scale", Float) = 1.0
+        _MainTexture("Tree Texture", 2D) = "white" {}
+        _LeafTexture("Leaf Texture", 2D) = "white" {}
+        _Color("Tree Color", Color) = (0, 0.5, 0, 1)
         _LeafColor("Leaf Color", Color) = (0.8, 0.6, 0.6, 1)
-        _Color("Color", Color) = (0, 0.5, 0, 1)
         _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
         _LightDirection("Light Direction", Vector) = (0.3, 0.8, 0.0, 0)
         _Bands("Cel Shading Bands", Float) = 3.0
@@ -56,6 +53,8 @@ Shader "Custom/SDFTree"
             };
 
             CBUFFER_START(UnityPerMaterial)
+                float4 _MainTexture_ST;
+                float4 _LeafTexture_ST;
                 float4 _Color;
                 float4 _ShadowColor;
                 float4 _LeafColor;
@@ -73,6 +72,10 @@ Shader "Custom/SDFTree"
             float4 _BranchDataA[512]; // xy = start, zw = end
             float4 _BranchDataB[512]; // x = radius
 
+            TEXTURE2D(_MainTexture);
+            SAMPLER(sampler_MainTexture);
+            TEXTURE2D(_LeafTexture);
+            SAMPLER(sampler_LeafTexture);
 
             Varyings vert(Attributes IN)
             {
@@ -85,11 +88,6 @@ Shader "Custom/SDFTree"
 
                 return OUT;
             }
-
-            // float sdCircle(float2 pos, float2 center, float radius)
-            // {
-            //     return length(pos - center) - radius;
-            // }
 
             float sdCapsule(float2 pos, float2 a, float2 b, float radius)
             {
@@ -137,6 +135,8 @@ Shader "Custom/SDFTree"
             {
                 float2 p = IN.positionOS.xy * _TreeScale; // Scale the tree in 2D object space
 
+                float2 uv = IN.positionOS.xy * 0.5 + 0.5;
+
                 float branchDist = sdTree(p);
                 float leafDist = sdLeaf(p); // Scale leaf distance separately
 
@@ -175,9 +175,13 @@ Shader "Custom/SDFTree"
 
                 // Leaves
                 float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
-                float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
+                // float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
 
-                float3 finalColor = lerp(celColor, _LeafColor * leafPulse, leafRegion);
+                // Sample texture(s)
+                float4 texColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
+                float3 branchColor = texColor.rgb * _Color.rgb * celColor;
+
+                float3 finalColor = lerp(branchColor, _LeafColor /** leafPulse */, leafRegion);
 
                 return float4(finalColor, 1);
 
