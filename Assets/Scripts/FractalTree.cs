@@ -61,6 +61,7 @@ public class FractalTree : MonoBehaviour
 
     Vector4[] branchDataA = new Vector4[MAX_BRANCHES]; // start.xy, end.xy
     Vector4[] branchDataB = new Vector4[MAX_BRANCHES]; // radius, depth, unused, unused
+    List<Vector4> leafData = new List<Vector4>(); // xy = position, z = size / radius, w = unused
     int branchCount = 0;
 
 
@@ -123,6 +124,12 @@ public class FractalTree : MonoBehaviour
         meshRenderer.sharedMaterial.SetInt("_BranchCount", branchCount);
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataA", branchDataA); // xy = start, zw = end
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataB", branchDataB); // x = radius, y/z/w unused for now but could store other params
+
+        // LEAVES
+        leafData.Clear();
+        CollectLeaves(root);
+        meshRenderer.sharedMaterial.SetInt("_LeafCount", leafData.Count);
+        meshRenderer.sharedMaterial.SetVectorArray("_LeafPositions", leafData); 
 
         // DebugDrawBranch(root); // Debug draw the tree for visualization
     }
@@ -282,6 +289,24 @@ public class FractalTree : MonoBehaviour
             CollectBranches(child);
         }
 
+    }
+
+    void CollectLeaves(TreeBranch branch)
+    {
+        if (branch == null)
+                return;
+    
+        if (branch.childBranches.Count == 0 || branch.depth == maxDepth) // If it's a leaf node
+        {
+            // Store leaf data in separate arrays for GPU processing
+            float leafRadius = 0.1f; // Can be scaled by depth or randomized
+            leafData.Add(new Vector4(branch.end.x, branch.end.y, leafRadius, 0)); // Position and size of the leaf
+        }
+    
+        foreach (var child in branch.childBranches)
+        {
+            CollectLeaves(child);
+        }
     }
 
     // Apply a simple sinusoidal sway to each branch and update child start positions

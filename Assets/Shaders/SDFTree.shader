@@ -8,6 +8,8 @@ Shader "Custom/SDFTree"
         // _BranchCount("Branch Count", Range(1, 256)) = 256
 
         _TreeScale("Tree Scale", Float) = 1.0
+        _LeafScale("Leaf Scale", Float) = 1.0
+        _LeafColor("Leaf Color", Color) = (0.8, 0.6, 0.6, 1)
         _Color("Color", Color) = (0, 0.5, 0, 1)
         _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
         _LightDirection("Light Direction", Vector) = (0.3, 0.8, 0.0, 0)
@@ -56,16 +58,21 @@ Shader "Custom/SDFTree"
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
                 float4 _ShadowColor;
+                float4 _LeafColor;
                 float _Bands;
                 float _Edge;
                 int _BranchCount;
+                int _LeafCount;
                 float _TreeScale;
+                float _LeafScale;
                 float3 _LightDirection;
 
             CBUFFER_END
             
+            float4 _LeafPositions[512]; // xy = pos, z = radius, w unused
             float4 _BranchDataA[512]; // xy = start, zw = end
             float4 _BranchDataB[512]; // x = radius
+
 
             Varyings vert(Attributes IN)
             {
@@ -79,10 +86,10 @@ Shader "Custom/SDFTree"
                 return OUT;
             }
 
-            float sdCircle(float2 pos, float2 center, float radius)
-            {
-                return length(pos - center) - radius;
-            }
+            // float sdCircle(float2 pos, float2 center, float radius)
+            // {
+            //     return length(pos - center) - radius;
+            // }
 
             float sdCapsule(float2 pos, float2 a, float2 b, float radius)
             {
@@ -113,25 +120,43 @@ Shader "Custom/SDFTree"
                 return minDist;
             }
 
+            float sdLeaf(float2 pos)
+            {
+                float leafDist = 1e5;
+                for (int i = 0; i < _LeafCount; i++)
+                {
+                    float2 leafPos = _LeafPositions[i].xy;
+                    float leafRadius = _LeafPositions[i].z * _LeafScale;
+                    leafDist = min(leafDist, length(pos - leafPos) - leafRadius);
+                }
+
+                return leafDist;
+            }
+
             half4 frag(Varyings IN) : SV_Target
             {
                 float2 p = IN.positionOS.xy * _TreeScale; // Scale the tree in 2D object space
 
-                float minDist = sdTree(p);
+                float branchDist = sdTree(p);
+                float leafDist = sdLeaf(p); // Scale leaf distance separately
 
-                float edgeWidth = fwidth(minDist) * _Edge;
-                float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, minDist);
+                // Combine branch and leaf SDFs
+                float combinedDist = min(branchDist, leafDist);
+
+                // Branch edge mask
+                float edgeWidth = fwidth(combinedDist) * _Edge;
+                float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, combinedDist);
 
                 if(mask <= 0.001)
                 {
                     discard;
                 }
 
-                float eps = fwidth(minDist); // Epsilon - Small offset for gradient estimation
+                float eps = fwidth(combinedDist); // Epsilon - Small offset for gradient estimation
 
-                // Sample SDF around current point
-                float dx = sdTree(p + float2(eps, 0)) - minDist;
-                float dy = sdTree(p + float2(0, eps)) - minDist;
+                // Sample SDFs around current point
+                float dx = min(sdTree(p + float2(eps, 0)), sdLeaf(p + float2(eps, 0))) - combinedDist;
+                float dy = min(sdTree(p + float2(0, eps)), sdLeaf(p + float2(0, eps))) - combinedDist;
 
                 // Surface normal is the gradient of the SDF
                 float2 normal2D = normalize(float2(dx, dy));
@@ -141,24 +166,23 @@ Shader "Custom/SDFTree"
 
                 // CEL SHADING
                 float ndotl = saturate(dot(normalWS, _LightDirection));
-                float bands = _Bands;
-                float cel = floor(ndotl * bands) / bands;
+                float cel = floor(ndotl * _Bands) / _Bands;
 
                 float3 shadowColor = _ShadowColor.rgb;
                 float3 litColor = _Color.rgb;
 
-                float rimLighting = 1.0 - saturate(dot(normalWS, float3(0, 0, 1))); // Rim lighting
-
-                // rimLighting = pow(rimLighting, 3.0); // Exponentiate for sharper rim
-
                 float3 celColor = lerp(shadowColor, litColor, cel);
 
-                // celColor += rimLighting * 0.2;
+                // Leaves
+                float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
+                float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
 
-                return float4(celColor * mask, 1);
+                float3 finalColor = lerp(celColor, _LeafColor * leafPulse, leafRegion);
+
+                return float4(finalColor, 1);
 
                 // Debug draw
-                // return float4(_BranchCount / 256.0, 0, 0, 1);
+                // return float4(_LeafPositions[0].xy * 0.5 + 0.5, 0, 1);
             }
             ENDHLSL
         }

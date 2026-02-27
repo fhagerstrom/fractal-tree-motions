@@ -360,7 +360,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
   currentWindModel: 2
-  maxDepth: 5
+  maxDepth: 8
   initialLength: 2
   lengthScale: 0.7
   branchAngle: 30
