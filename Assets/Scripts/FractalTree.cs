@@ -71,7 +71,8 @@ public class FractalTree : MonoBehaviour
 
         treeMesh = GetComponent<Mesh>();
 
-        // treeMesh = new Mesh();
+        // PROCEDURAL MESH APPROACH - Comment out if using SDF shader approach instead
+        //treeMesh = new Mesh();
 
         //treeMesh.name = "FractalTreeMesh";
         //meshFilter.mesh = treeMesh;
@@ -132,7 +133,7 @@ public class FractalTree : MonoBehaviour
             seed = Random.Range(0, 10000); // Randomize seed for different tree shapes each run
 
         root = GenerateBranch(null, new Vector2(0, -2), Mathf.PI / 2f, 0);
-        BuildTreeMesh(root);
+        // BuildTreeMesh(root);
     }
 
     // Regenerate the tree if parameters changes.
@@ -262,7 +263,7 @@ public class FractalTree : MonoBehaviour
 
     }
 
-    // Store branch data in arrays for GPU processing. Trying out SDF approach.
+    // Store branch data in arrays for GPU processing. SDF approach.
     void CollectBranches(TreeBranch branch)
     {
         if (branch == null || branchCount >= MAX_BRANCHES)

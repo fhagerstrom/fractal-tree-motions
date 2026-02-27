@@ -2,18 +2,21 @@ Shader "Custom/SDFTree"
 {
     Properties
     {
-        // _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         // // _BaseMap("Base Map", 2D) = "white" {}
-        // _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
         // _Threshold("Threshold", Range(0, 1)) = 0.5
         // _Smoothness("Band Smoothness", Range(0.001, 0.2)) = 0.02
         // _BranchCount("Branch Count", Range(1, 256)) = 256
 
-        // CIRCLE SHAPE TESTING
-        _Color("Color", Color) = (0, 1, 0, 1)
-        _Center("Center (XY)", Vector) = (0, 0, 0, 0)
-        _Radius("Radius", Float) = 1.0
+        _TreeScale("Tree Scale", Float) = 1.0
+        _Color("Color", Color) = (0, 0.5, 0, 1)
+        _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
+        _LightDirection("Light Direction", Vector) = (0.3, 0.8, 0.0, 0)
+        _Bands("Cel Shading Bands", Float) = 3.0
         _Edge("Edge", Float) = 0.01
+
+        // CIRCLE SHAPE TESTING
+        // _Center("Center (XY)", Vector) = (0, 0, 0, 0)
+        // _Radius("Radius", Float) = 1.0
     }
 
     SubShader
@@ -22,9 +25,9 @@ Shader "Custom/SDFTree"
 
         Pass
         {
-            // Blend One Zero
-            // ZWrite On
-            // ZTest LEqual
+            Blend One Zero
+            ZWrite On
+            ZTest LEqual
 
             HLSLPROGRAM
 
@@ -44,24 +47,21 @@ Shader "Custom/SDFTree"
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
-                // float3 positionOS : TEXCOORD0;
                 float3 positionWS : TEXCOORD0;
-                // float3 normalWS : TEXCOORD1;
+                float3 positionOS : TEXCOORD1;
                 // float2 uv : TEXCOORD2;
                 // float4 color : COLOR;
             };
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
-                float4 _Center;
-                float _Radius;
+                float4 _ShadowColor;
+                float _Bands;
                 float _Edge;
-                float _BranchCount;
-            
-                // half4 _BaseColor;
-                // float4 _ShadowColor;
-                // float _Threshold;
-                // float _Smoothness;
+                int _BranchCount;
+                float _TreeScale;
+                float3 _LightDirection;
+
             CBUFFER_END
             
             float4 _BranchDataA[512]; // xy = start, zw = end
@@ -71,13 +71,10 @@ Shader "Custom/SDFTree"
             {
                 Varyings OUT;
 
-                OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
-                // OUT.positionOS = IN.positionOS.xyz;
-                OUT.positionHCS = TransformWorldToHClip(IN.positionOS.xyz);
-                // OUT.positionHCS = TransformObjectToHClip(OUT.positionWS);
-                // OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
-                // OUT.uv = IN.uv;
-                // OUT.color = IN.color;
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz); 
+                OUT.positionWS = positionWS;
+                OUT.positionOS = IN.positionOS.xyz;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
 
                 return OUT;
             }
@@ -95,57 +92,73 @@ Shader "Custom/SDFTree"
                 return length(pa - ba * height) - radius; // Distance from point to capsule surface
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            float sdTree(float2 pos)
             {
-                float2 p = IN.positionWS.xy;
-                // p *= 4.0;
-                // p.y += 0.5;
-
                 float minDist = 1e5;
 
                 float2 start;
                 float2 end;
                 float radius;
 
-                for(int i = 0; i < (int)_BranchCount; i++)
+                for(int i = 0; i < _BranchCount; i++)
                 {
                     start = _BranchDataA[i].xy;
                     end = _BranchDataA[i].zw;
                     radius = _BranchDataB[i].x;
 
-                    float d = sdCapsule(p, start, end, radius);
+                    float d = sdCapsule(pos, start, end, radius);
                     minDist = min(minDist, d);
                 }
 
-                // float d = sdCircle(p, _Center.xy, _Radius);
+                return minDist;
+            }
 
-                float mask = 1.0 - smoothstep(0.0, _Edge, minDist);
+            half4 frag(Varyings IN) : SV_Target
+            {
+                float2 p = IN.positionOS.xy * _TreeScale; // Scale the tree in 2D object space
 
-                // if(mask <= 0.001)
-                // {
-                //     discard;
-                // }
+                float minDist = sdTree(p);
 
-                return float4(_Color.rgb * mask, 1);
+                float edgeWidth = fwidth(minDist) * _Edge;
+                float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, minDist);
+
+                if(mask <= 0.001)
+                {
+                    discard;
+                }
+
+                float eps = fwidth(minDist); // Epsilon - Small offset for gradient estimation
+
+                // Sample SDF around current point
+                float dx = sdTree(p + float2(eps, 0)) - minDist;
+                float dy = sdTree(p + float2(0, eps)) - minDist;
+
+                // Surface normal is the gradient of the SDF
+                float2 normal2D = normalize(float2(dx, dy));
+
+                // Convert normal to 3D
+                float3 normalWS = normalize(float3(normal2D, 0));
+
+                // CEL SHADING
+                float ndotl = saturate(dot(normalWS, _LightDirection));
+                float bands = _Bands;
+                float cel = floor(ndotl * bands) / bands;
+
+                float3 shadowColor = _ShadowColor.rgb;
+                float3 litColor = _Color.rgb;
+
+                float rimLighting = 1.0 - saturate(dot(normalWS, float3(0, 0, 1))); // Rim lighting
+
+                // rimLighting = pow(rimLighting, 3.0); // Exponentiate for sharper rim
+
+                float3 celColor = lerp(shadowColor, litColor, cel);
+
+                // celColor += rimLighting * 0.2;
+
+                return float4(celColor * mask, 1);
 
                 // Debug draw
                 // return float4(_BranchCount / 256.0, 0, 0, 1);
-
-                // // CEL SHADING
-                // float3 normal = normalize(IN.normalWS);
-                // float3 lightDirection = normalize(float3(0, 1, 0));
-
-                // float NdotL = saturate(dot(normal, lightDirection));
-                // float band = smoothstep(_Threshold - _Smoothness, _Threshold + _Smoothness, NdotL);
-
-                // float3 color = lerp(_ShadowColor.rgb, _BaseColor.rgb, band);
-
-                // // Optional height gradient
-                // float heightFactor = saturate(IN.positionWS.y * 0.1);
-                // color *= lerp(0.8, 1.2, heightFactor);
-
-                // return float4(color, 1);
-
             }
             ENDHLSL
         }

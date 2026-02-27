@@ -359,17 +359,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abe69896ada2fda44910ed42b12b2c7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
-  currentWindModel: 0
-  maxDepth: 4
+  currentWindModel: 2
+  maxDepth: 5
   initialLength: 2
   lengthScale: 0.7
-  branchAngle: 25
-  branchWidth: 0.05
+  branchAngle: 30
+  branchWidth: 0.1
   widthScaleByDepth: 0.75
   seed: 0
   randomizeSeed: 1
-  angleNoiseScale: 20
-  lengthNoiseScale: 0.2
+  angleNoiseScale: 45
+  lengthNoiseScale: 0.75
   noiseFrequency: 1
   sineAmplitude: 5
   swayFrequency: 0.1
@@ -402,7 +402,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!64 &363476037
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -594,7 +594,7 @@ GameObject:
   - component: {fileID: 468283346}
   - component: {fileID: 468283345}
   m_Layer: 0
-  m_Name: FractalTreeObject
+  m_Name: ProceduralTreeObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
