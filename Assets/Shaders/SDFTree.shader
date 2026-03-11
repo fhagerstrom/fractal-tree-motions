@@ -68,7 +68,7 @@ Shader "Custom/SDFTree"
 
             CBUFFER_END
             
-            float4 _LeafPositions[512]; // xy = pos, z = radius, w unused
+            float4 _LeafPositions[2048]; // xy = pos, z = radius, w unused
             float4 _BranchDataA[512]; // xy = start, zw = end
             float4 _BranchDataB[512]; // x = radius
 
@@ -176,17 +176,38 @@ Shader "Custom/SDFTree"
                 float3 litColor = _Color.rgb;
 
                 float3 celColor = lerp(shadowColor, litColor, cel);
+                float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
 
                 // Leaves
                 float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
                 // float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
 
+                float3 leafColor = (0, 0, 0);
+
+                for(int i = 0; i < _LeafCount; i++)
+                {
+                    float2 leafPos = _LeafPositions[i].xy;
+                    float leafRadius = _LeafPositions[i].z * _LeafScale;
+
+                    float2 offset = p - leafPos; 
+
+                    // Check if we're in the region of this leaf
+                    if(length(offset) <= leafRadius)
+                    {
+                        // Sample leaf texture with UVs based on distance to leaf center
+                        float2 leafUV = offset / leafRadius * 0.5 + 0.5; // Scale UVs to fit the leaf
+
+                        float4 leafTex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, leafUV);
+
+                        float alpha = smoothstep(leafRadius, leafRadius - 0.01, length(offset)); // Soft edge for leaves
+
+                        leafColor = lerp(leafColor, leafTex.rgb * _LeafColor.rgb * celColor, alpha); // Modulate by cel color and leaf color
+                    }
+                }
+
                 // Sample texture(s)
-                float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
-                float4 leafTexColor = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, uv * _LeafScale); // Scale UVs for leaves
                 
                 float3 branchColor = branchTexColor.rgb * _Color.rgb * celColor;
-                float3 leafColor = leafTexColor.rgb * _LeafColor.rgb * celColor;
 
                 float3 finalColor = lerp(branchColor, leafColor /** leafPulse */, leafRegion);
 

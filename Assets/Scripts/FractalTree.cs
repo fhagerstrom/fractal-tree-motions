@@ -37,6 +37,12 @@ public class FractalTree : MonoBehaviour
     public float lengthNoiseScale = 0.2f;
     public float noiseFrequency = 1.0f;
 
+    [Header("Leaves")]
+    public bool leafClusters = true; // Draw leaves in clusters, or a single leaf per branch end.
+    public int leafClusterMin = 3; // Minimum number of leaves in a cluster
+    public int leafClusterMax = 6; // Maximum number of leaves in a cluster
+    [HideInInspector] public float leafClusterRadius = 0.15f;
+
     // Sway animation parameters (degrees and units)
     [Header("Sinusoidal Sway")]
     [HideInInspector] public float sineAmplitude = 5f; // Maximum angle offset at depth 0
@@ -57,6 +63,7 @@ public class FractalTree : MonoBehaviour
     [HideInInspector] public float vectorWindSpatialFrequency = 0.5f; // How quickly the noise changes across space
     [HideInInspector] public float vectorWindSpeed = 0.5f; // How quickly the noise changes across space
 
+    // Array variables to send to shader for SDF approach. Define max branches to prevent overflow. Define list for leaves.
     const int MAX_BRANCHES = 512;
 
     Vector4[] branchDataA = new Vector4[MAX_BRANCHES]; // start.xy, end.xy
@@ -109,23 +116,19 @@ public class FractalTree : MonoBehaviour
                 break;
         }
 
-        //// Animate branch angles before building the mesh so geometry follows the motion
-        //SinusoidalAnimation(root);
-        //NoiseWindAnimation(root);
-
         // BuildTreeMesh(root);
 
         // SDF approach - collect branch data into arrays and pass to shader for rendering
         branchCount = 0;
         CollectBranches(root);
 
-        Debug.Log("Branch Count: " + branchCount);
+        // Debug.Log("Branch Count: " + branchCount);
 
+        // Set branch and leaf data for shader
         meshRenderer.sharedMaterial.SetInt("_BranchCount", branchCount);
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataA", branchDataA); // xy = start, zw = end
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataB", branchDataB); // x = radius, y/z/w unused for now but could store other params
 
-        // LEAVES
         leafData.Clear();
         UpdateLeafData(root);
         meshRenderer.sharedMaterial.SetInt("_LeafCount", leafData.Count);
@@ -268,14 +271,22 @@ public class FractalTree : MonoBehaviour
 
         if (branch.childBranches.Count == 0 || depth == maxDepth) // At the end of the recursion, add leaves
         {
-            int clusterSize = Random.Range(3, 6); // Random number of leaves per cluster
-            float clusterRadius = 0.15f;
-
-            for (int i = 0; i < clusterSize; i++)
+            // Draw leaves in clusters depending on bool
+            if(leafClusters)
             {
-                branch.leafOffsets.Add(Random.insideUnitCircle * clusterRadius);
+                int clusterSize = Random.Range(leafClusterMin, leafClusterMax + 1); // Random number of leaves per cluster
+
+                for (int i = 0; i < clusterSize; i++)
+                {
+                    branch.leafOffsets.Add(Random.insideUnitCircle * leafClusterRadius);
+                }
             }
 
+            else
+            {
+                // Single leaf
+                branch.leafOffsets.Add(Vector2.zero);
+            }
         }
 
         return branch;
@@ -375,7 +386,12 @@ public class FractalTree : MonoBehaviour
         offset = centered * ampRadius * windStrength;
         offset *= stiffness;
 
-        branch.currentAngle = branch.baseAngle + offset;
+        // Bend branches more if they are aligned with the wind direction, less if they are perpendicular
+        float windAlignment = Vector2.Dot(direction, windDirection);
+        offset *= windAlignment;
+
+        // branch.currentAngle = branch.baseAngle + offset;
+        branch.currentAngle = Mathf.Lerp(branch.currentAngle, branch.baseAngle + offset, Time.deltaTime * 5f); // Interpolate for inertia and smoother motion
 
         foreach (var child in branch.childBranches)
         {
@@ -408,7 +424,8 @@ public class FractalTree : MonoBehaviour
         offset = bend * ampRadius;
         offset *= stiffness;
 
-        branch.currentAngle = branch.baseAngle + offset;
+        // branch.currentAngle = branch.baseAngle + offset;
+        branch.currentAngle = Mathf.Lerp(branch.currentAngle, branch.baseAngle + offset, Time.deltaTime * 5f); // Interpolate for inertia and smoother motion
 
         foreach (var child in branch.childBranches)
         {
