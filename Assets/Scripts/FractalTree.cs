@@ -127,7 +127,7 @@ public class FractalTree : MonoBehaviour
 
         // LEAVES
         leafData.Clear();
-        CollectLeaves(root);
+        UpdateLeafData(root);
         meshRenderer.sharedMaterial.SetInt("_LeafCount", leafData.Count);
         meshRenderer.sharedMaterial.SetVectorArray("_LeafPositions", leafData); 
 
@@ -266,8 +266,19 @@ public class FractalTree : MonoBehaviour
             branch.childBranches.Add(right);
         }
 
-        return branch;
+        if (branch.childBranches.Count == 0 || depth == maxDepth) // At the end of the recursion, add leaves
+        {
+            int clusterSize = Random.Range(3, 6); // Random number of leaves per cluster
+            float clusterRadius = 0.15f;
 
+            for (int i = 0; i < clusterSize; i++)
+            {
+                branch.leafOffsets.Add(Random.insideUnitCircle * clusterRadius);
+            }
+
+        }
+
+        return branch;
     }
 
     // Store branch data in arrays for GPU processing. SDF approach.
@@ -291,21 +302,27 @@ public class FractalTree : MonoBehaviour
 
     }
 
-    void CollectLeaves(TreeBranch branch)
+    void UpdateLeafData(TreeBranch branch)
     {
         if (branch == null)
                 return;
-    
-        if (branch.childBranches.Count == 0 || branch.depth == maxDepth) // If it's a leaf node
+
+        Vector2 direction = (branch.end - branch.start).normalized;
+        Vector2 normal = new Vector2(-direction.y, direction.x);
+
+        foreach (var offset in branch.leafOffsets)
         {
-            // Store leaf data in separate arrays for GPU processing
-            float leafRadius = 0.1f; // Can be scaled by depth or randomized
-            leafData.Add(new Vector4(branch.end.x, branch.end.y, leafRadius, 0)); // Position and size of the leaf
+            Vector2 rotatedOffset = direction * offset.y + normal * offset.x; // Rotate the leaf offset to align with branch direction
+            Vector2 leafPos = branch.end + rotatedOffset; // Position the leaf at the end of the branch plus some random offset
+
+            float leafRadius = 0.1f;
+
+            leafData.Add(new Vector4(leafPos.x, leafPos.y, leafRadius, 0)); // Store leaf position xy and size in z
         }
-    
+
         foreach (var child in branch.childBranches)
         {
-            CollectLeaves(child);
+            UpdateLeafData(child);
         }
     }
 

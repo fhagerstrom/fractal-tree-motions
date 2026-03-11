@@ -6,6 +6,7 @@ public class TreeBranch
 {
     public TreeBranch parentBranch;
     public List<TreeBranch> childBranches = new List<TreeBranch>();
+    public List<Vector2> leafOffsets = new List<Vector2>();
 
     public Vector2 start;
 

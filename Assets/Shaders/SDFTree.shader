@@ -9,7 +9,7 @@ Shader "Custom/SDFTree"
         _Color("Tree Color", Color) = (0, 0.5, 0, 1)
         _LeafColor("Leaf Color", Color) = (0.8, 0.6, 0.6, 1)
         _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
-        _LightDirection("Light Direction", Vector) = (0.3, 0.8, 0.0, 0)
+        _LightDirection("Light Direction", Vector) = (0.4, 0.8, 0.0, 0)
         _Bands("Cel Shading Bands", Float) = 3.0
         _Edge("Edge", Float) = 0.01
 
@@ -99,20 +99,21 @@ Shader "Custom/SDFTree"
 
             float sdTree(float2 pos)
             {
-                float minDist = 1e5;
+                float minDist = 1e5; // Start with a large distance, will be reduced by checking each branch
 
                 float2 start;
                 float2 end;
                 float radius;
 
+                // Loop through all branches and find the minimum distance to any branch
                 for(int i = 0; i < _BranchCount; i++)
                 {
                     start = _BranchDataA[i].xy;
                     end = _BranchDataA[i].zw;
                     radius = _BranchDataB[i].x;
 
-                    float d = sdCapsule(pos, start, end, radius);
-                    minDist = min(minDist, d);
+                    float d = sdCapsule(pos, start, end, radius); // Distance from point to current branch
+                    minDist = min(minDist, d); // Update minimum distance if this branch is closer
                 }
 
                 return minDist;
@@ -120,12 +121,13 @@ Shader "Custom/SDFTree"
 
             float sdLeaf(float2 pos)
             {
-                float leafDist = 1e5;
+                float leafDist = 1e5; // Start with a large distance
+                // Loop through all leaves and find the minimum distance to any leaf
                 for (int i = 0; i < _LeafCount; i++)
                 {
                     float2 leafPos = _LeafPositions[i].xy;
                     float leafRadius = _LeafPositions[i].z * _LeafScale;
-                    leafDist = min(leafDist, length(pos - leafPos) - leafRadius);
+                    leafDist = min(leafDist, length(pos - leafPos) - leafRadius); // Distance from point to current leaf (circle) and update minimum distance
                 }
 
                 return leafDist;
@@ -168,6 +170,8 @@ Shader "Custom/SDFTree"
                 float ndotl = saturate(dot(normalWS, _LightDirection));
                 float cel = floor(ndotl * _Bands) / _Bands;
 
+                cel = smoothstep(cel - 0.01, cel + 0.01, ndotl);
+
                 float3 shadowColor = _ShadowColor.rgb;
                 float3 litColor = _Color.rgb;
 
@@ -178,10 +182,13 @@ Shader "Custom/SDFTree"
                 // float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
 
                 // Sample texture(s)
-                float4 texColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
-                float3 branchColor = texColor.rgb * _Color.rgb * celColor;
+                float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
+                float4 leafTexColor = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, uv * _LeafScale); // Scale UVs for leaves
+                
+                float3 branchColor = branchTexColor.rgb * _Color.rgb * celColor;
+                float3 leafColor = leafTexColor.rgb * _LeafColor.rgb * celColor;
 
-                float3 finalColor = lerp(branchColor, _LeafColor /** leafPulse */, leafRegion);
+                float3 finalColor = lerp(branchColor, leafColor /** leafPulse */, leafRegion);
 
                 return float4(finalColor, 1);
 

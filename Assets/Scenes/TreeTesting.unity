@@ -368,9 +368,9 @@ MonoBehaviour:
   widthScaleByDepth: 0.75
   seed: 0
   randomizeSeed: 1
-  angleNoiseScale: 45
+  angleNoiseScale: 35
   lengthNoiseScale: 0.75
-  noiseFrequency: 1
+  noiseFrequency: 0.5
   sineAmplitude: 5
   swayFrequency: 0.1
   depthAmplitudeScale: 0.8
