@@ -23,6 +23,7 @@ public class FractalTree : MonoBehaviour
 
     // Parameters for tree generation
     [Header("Tree Generation")]
+    public Vector2 treePosition = new Vector2(0, -2);
     public int maxDepth = 8;
     public float initialLength = 2f;
     public float lengthScale = 0.7f;
@@ -30,9 +31,21 @@ public class FractalTree : MonoBehaviour
     public float branchWidth = 0.05f;
     public float widthScaleByDepth = 0.75f; // Multiplies width per depth
 
-    [Header("Tree Noise")]
+    [Header("Randomization")]
+    public bool randomizeSeed = true; // Bool for randomizing seed if wanted
+
+    // Randomize seed. Can be done either through inspector or putting bool to true and pressing play
+    [ContextMenuItem("Randomize", "RandomizeSeed")]
     public int seed = 0;
-    public bool randomizeSeed = false; // Bool for randomizing seed if wanted
+    void RandomizeSeed()
+    {
+        seed = Random.Range(0, int.MaxValue);
+        randomizeSeed = false; // Reset to false so it doesn't keep randomizing every time we regenerate the tree
+
+        GenerateBranch(null, treePosition, Mathf.PI / 2f, 0);
+    }
+
+    [Header("Tree Noise")]
     public float angleNoiseScale = 20f;
     public float lengthNoiseScale = 0.2f;
     public float noiseFrequency = 1.0f;
@@ -42,6 +55,14 @@ public class FractalTree : MonoBehaviour
     public int leafClusterMin = 3; // Minimum number of leaves in a cluster
     public int leafClusterMax = 6; // Maximum number of leaves in a cluster
     [HideInInspector] public float leafClusterRadius = 0.15f;
+
+    [Header("Spring Dynamics")]
+    public float springStiffness = 15f; // How strongly branches return to their base angle after displacement
+    public float springDamping = 5f; // Damping for the spring motion to prevent infinite oscillation
+
+    [Header("Wind Gusts")]
+    public float gustStrength = 2f; // How strong the gusts are when they occur
+    public float gustFrequency = 0.1f; // How often they occur in seconds
 
     // Sway animation parameters (degrees and units)
     [Header("Sinusoidal Sway")]
@@ -85,10 +106,14 @@ public class FractalTree : MonoBehaviour
         //treeMesh.name = "FractalTreeMesh";
         //meshFilter.mesh = treeMesh;
 
-        if (randomizeSeed == true)
-            seed = Random.Range(0, 10000); // Randomize seed for different tree shapes each run
-
-        root = GenerateBranch(null, new Vector2(0, -2), Mathf.PI / 2f, 0); // Start with a vertical trunk
+        if (randomizeSeed)
+        {
+            seed = Random.Range(0, int.MaxValue); // Randomize seed for different tree shapes each run
+            randomizeSeed = false; // Reset to false so it doesn't keep randomizing every time we regenerate the tree
+        }
+        Random.InitState(seed); // Initialize random state with seed for consistent tree generation
+        
+        root = GenerateBranch(null, treePosition, Mathf.PI / 2f, 0); // Start with a vertical trunk
     }
 
     // Update is called once per frame
@@ -337,6 +362,25 @@ public class FractalTree : MonoBehaviour
         }
     }
 
+    // Simple spring physics to animate branches back to their base angles after displacement. Called in each wind animation function
+    void ApplySpring(TreeBranch branch, float targetOffset)
+    {
+        // Depth dependent stiffness
+        float depthFactor = 1f + branch.depth * 0.5f;
+
+        float stiffness = springStiffness * depthFactor;
+        float damping = springDamping * depthFactor;
+
+        float dt = Time.deltaTime;
+        float displacement = targetOffset - branch.angleOffset; // How far we are from the target offset
+        float acceleration = displacement * stiffness; // Hooke's Law: F = xk, where x is the displacement and k is the stiffness
+
+        branch.angularVelocity += acceleration * dt; // Integrate acceleration to velocity
+        branch.angularVelocity *= Mathf.Exp(-damping * dt); // Damping
+        branch.angleOffset += branch.angularVelocity * dt; // Integrate velocity to get new angle offset
+        branch.currentAngle = branch.baseAngle + branch.angleOffset;
+    }
+
     // Apply a simple sinusoidal sway to each branch and update child start positions
     void SinusoidalAnimation(TreeBranch branch)
     {
@@ -351,9 +395,21 @@ public class FractalTree : MonoBehaviour
 
         // Add stiffness to trunk
         float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
-        offset *= stiffness;
+        // offset *= stiffness;
 
-        branch.currentAngle = branch.baseAngle + offset;
+        // Apply gusts as a multiplier to wind offset
+        float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
+        gust *= Mathf.Lerp(1f, gustStrength, gust);
+
+        offset *= gust;
+
+        if (branch.parentBranch != null)
+        {
+            // Inherit some of the parent's sway for more natural motion
+            offset += (branch.parentBranch.angleOffset) * 0.6f;
+        }
+
+        ApplySpring(branch, offset);
 
         // Update children start positions and animate them
         foreach (var child in branch.childBranches)
@@ -384,14 +440,25 @@ public class FractalTree : MonoBehaviour
         float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
 
         offset = centered * ampRadius * windStrength;
-        offset *= stiffness;
+        //offset *= stiffness;
 
         // Bend branches more if they are aligned with the wind direction, less if they are perpendicular
         float windAlignment = Vector2.Dot(direction, windDirection);
         offset *= windAlignment;
 
-        // branch.currentAngle = branch.baseAngle + offset;
-        branch.currentAngle = Mathf.Lerp(branch.currentAngle, branch.baseAngle + offset, Time.deltaTime * 5f); // Interpolate for inertia and smoother motion
+        // Apply gusts as a multiplier to wind offset
+        float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
+        gust *= Mathf.Lerp(1f, gustStrength, gust);
+
+        offset *= gust;
+
+        if (branch.parentBranch != null)
+        {
+            // Inherit some of the parent's sway for more natural motion
+            offset += (branch.parentBranch.angleOffset) * 0.6f;
+        }
+
+        ApplySpring(branch, offset);
 
         foreach (var child in branch.childBranches)
         {
@@ -422,10 +489,21 @@ public class FractalTree : MonoBehaviour
         float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
 
         offset = bend * ampRadius;
-        offset *= stiffness;
+        //offset *= stiffness;
 
-        // branch.currentAngle = branch.baseAngle + offset;
-        branch.currentAngle = Mathf.Lerp(branch.currentAngle, branch.baseAngle + offset, Time.deltaTime * 5f); // Interpolate for inertia and smoother motion
+        // Apply gusts as a multiplier to wind offset
+        float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
+        gust *= Mathf.Lerp(1f, gustStrength, gust);
+
+        offset *= gust;
+
+        if (branch.parentBranch != null)
+        {
+            // Inherit some of the parent's sway for more natural motion
+            offset += (branch.parentBranch.angleOffset) * 0.6f;
+        }
+
+        ApplySpring(branch, offset);
 
         foreach (var child in branch.childBranches)
         {

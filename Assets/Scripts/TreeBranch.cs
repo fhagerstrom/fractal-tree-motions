@@ -12,6 +12,8 @@ public class TreeBranch
 
     public float baseAngle;
     public float currentAngle;
+    public float angularVelocity; // How quickly the branch swings back and forth, for spring-like motion
+    public float angleOffset; // Random offset to make each branch swing differently, for spring-like motion
 
     public float length;
     public float depth;

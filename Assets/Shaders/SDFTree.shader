@@ -167,23 +167,57 @@ Shader "Custom/SDFTree"
                 float3 normalWS = normalize(float3(normal2D, 0));
 
                 // CEL SHADING
-                float ndotl = saturate(dot(normalWS, _LightDirection));
-                float cel = floor(ndotl * _Bands) / _Bands;
+                float ndotl = saturate(dot(normalWS, _LightDirection)); // Lambertian diffuse term
+                float cel = floor(ndotl * _Bands) / _Bands; // Quantize bands
 
-                cel = smoothstep(cel - 0.01, cel + 0.01, ndotl);
+                cel = smoothstep(cel - 0.02, cel + 0.02, ndotl); // Soften edges between bands
 
                 float3 shadowColor = _ShadowColor.rgb;
                 float3 litColor = _Color.rgb;
 
                 float3 celColor = lerp(shadowColor, litColor, cel);
-                float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv); // Adjust UV scale as needed
+
+                float3 branchColor = (0, 0, 0); 
+                // Loop through branches, check if they influence this pixel, and compute UVs
+                for (int i = 0; i < _BranchCount; i++)
+                {
+                    float2 start = _BranchDataA[i].xy;
+                    float2 end = _BranchDataA[i].zw;
+                    float radius = _BranchDataB[i].x;
+
+                    float2 branchVector = end - start;
+                    float branchLength = length(branchVector);
+
+                    float2 branchDirection = branchVector / branchLength; // Normalize to get direction
+                    float2 branchNormal = float2(-branchDirection.y, branchDirection.x); // Perpendicular to branch direction
+
+                    float2 relPos = p - start;
+
+                    float u = dot(relPos, branchDirection); // Along branch
+                    float v = dot(relPos, branchNormal); // Across branch
+
+                    if (abs(v) <= radius && u >= 0 && u <= branchLength) // Check if we're within the branch capsule
+                    { 
+                        float2 branchUV;
+
+                        branchUV.x = u / branchLength; // Normalize u to [0, 1] along the branch
+                        branchUV.y = v / radius * 0.5 + 0.5; 
+
+                        float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, branchUV); // Adjust UV scale as needed
+
+                        float edge = fwidth(v);
+                        float alpha = 1.0 - smoothstep(radius - edge, radius, abs(v)); // Soft edge for branches
+                        branchColor = lerp(branchColor, branchTexColor.rgb * _Color.rgb * celColor, alpha); // Interpolate between branch color and cel color based on alpha
+                    }
+                }
+
+                branchColor = saturate(branchColor);
 
                 // Leaves
                 float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
-                // float leafPulse = 1.0 + 0.5 * sin(_Time.y * 0.5); // Pulsating effect based on time and position
-
+                
+                // Loop through leaves, check if they influence this pixel, and compute UVs
                 float3 leafColor = (0, 0, 0);
-
                 for(int i = 0; i < _LeafCount; i++)
                 {
                     float2 leafPos = _LeafPositions[i].xy;
@@ -198,20 +232,16 @@ Shader "Custom/SDFTree"
                         float2 leafUV = offset / leafRadius * 0.5 + 0.5; // Scale UVs to fit the leaf
 
                         float4 leafTex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, leafUV);
+                        float edge = fwidth(length(offset));
+                        float alpha = 1.0 - smoothstep(leafRadius - edge, leafRadius, length(offset)); // Soft edge for leaves
 
-                        float alpha = smoothstep(leafRadius, leafRadius - 0.01, length(offset)); // Soft edge for leaves
-
-                        leafColor = lerp(leafColor, leafTex.rgb * _LeafColor.rgb * celColor, alpha); // Modulate by cel color and leaf color
+                        leafColor = lerp(leafColor, leafTex.rgb * _LeafColor.rgb * celColor, alpha); // Interpolate between leaf color and cel color based on alpha
                     }
                 }
 
-                // Sample texture(s)
-                
-                float3 branchColor = branchTexColor.rgb * _Color.rgb * celColor;
+                float3 finalColor = lerp(branchColor, leafColor, leafRegion);
 
-                float3 finalColor = lerp(branchColor, leafColor /** leafPulse */, leafRegion);
-
-                return float4(finalColor, 1);
+                return float4(finalColor * mask, mask);
 
                 // Debug draw
                 // return float4(_LeafPositions[0].xy * 0.5 + 0.5, 0, 1);
