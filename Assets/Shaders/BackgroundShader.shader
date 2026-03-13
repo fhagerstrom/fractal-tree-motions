@@ -81,12 +81,25 @@ Shader "Custom/BackgroundShader"
             {
                 float2 uv = IN.uv;
 
-                float4 color = lerp(_BottomColor, _TopColor, uv.y);
+                float t = _Time.y * 0.05;
 
-                float t = _Time.y * 0.1;
-                float n = noise(uv * _NoiseScale + t);
+                float n1 = noise(uv * _NoiseScale + t);
+                float n2 = noise(uv * (_NoiseScale * 0.5) - t * 0.5);
+                float n = (n1 + n2) * 0.5;
+
+                float warp = (n - 0.5) * 0.08;
+                float gradient = saturate(uv.y + warp);
+
+                float4 color = lerp(_BottomColor, _TopColor, gradient);
 
                 color.rgb += (n - 0.5) * _NoiseStrength;
+
+                float horizon = smoothstep(0.1, 0.35, uv.y) * (1.0 - smoothstep(0.35, 0.6, uv.y));
+                color.rgb += horizon * 0.1;
+
+                float2 centerUV = uv - 0.5;
+                float vignette = 1.0 - dot(centerUV, centerUV) * 1.5;
+                color.rgb *= vignette;
 
                 return color;
             }

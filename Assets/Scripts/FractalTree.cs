@@ -46,8 +46,8 @@ public class FractalTree : MonoBehaviour
     }
 
     [Header("Tree Noise")]
-    public float angleNoiseScale = 20f;
-    public float lengthNoiseScale = 0.2f;
+    public float angleNoiseScale = 30f;
+    public float lengthNoiseScale = 0.5f;
     public float noiseFrequency = 1.0f;
 
     [Header("Leaves")]
@@ -89,8 +89,11 @@ public class FractalTree : MonoBehaviour
 
     Vector4[] branchDataA = new Vector4[MAX_BRANCHES]; // start.xy, end.xy
     Vector4[] branchDataB = new Vector4[MAX_BRANCHES]; // radius, depth, unused, unused
-    List<Vector4> leafData = new List<Vector4>(); // xy = position, z = size / radius, w = unused
     int branchCount = 0;
+
+    const int MAX_LEAVES = 512;
+    Vector4[] leafData = new Vector4[MAX_LEAVES]; // xy = position, z = size / radius, w = unused
+    int leafCount = 0;
 
 
     void Start()
@@ -154,9 +157,9 @@ public class FractalTree : MonoBehaviour
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataA", branchDataA); // xy = start, zw = end
         meshRenderer.sharedMaterial.SetVectorArray("_BranchDataB", branchDataB); // x = radius, y/z/w unused for now but could store other params
 
-        leafData.Clear();
+        leafCount = 0;
         UpdateLeafData(root);
-        meshRenderer.sharedMaterial.SetInt("_LeafCount", leafData.Count);
+        meshRenderer.sharedMaterial.SetInt("_LeafCount", leafCount);
         meshRenderer.sharedMaterial.SetVectorArray("_LeafPositions", leafData); 
 
         // DebugDrawBranch(root); // Debug draw the tree for visualization
@@ -340,7 +343,7 @@ public class FractalTree : MonoBehaviour
 
     void UpdateLeafData(TreeBranch branch)
     {
-        if (branch == null)
+        if (branch == null || leafCount >= MAX_LEAVES)
                 return;
 
         Vector2 direction = (branch.end - branch.start).normalized;
@@ -353,7 +356,8 @@ public class FractalTree : MonoBehaviour
 
             float leafRadius = 0.1f;
 
-            leafData.Add(new Vector4(leafPos.x, leafPos.y, leafRadius, 0)); // Store leaf position xy and size in z
+            leafData[leafCount] = new Vector4(leafPos.x, leafPos.y, leafRadius, 0); // Store leaf position xy and size in z
+            leafCount++;
         }
 
         foreach (var child in branch.childBranches)
@@ -366,7 +370,7 @@ public class FractalTree : MonoBehaviour
     void ApplySpring(TreeBranch branch, float targetOffset)
     {
         // Depth dependent stiffness
-        float depthFactor = 1f + branch.depth * 0.5f;
+        float depthFactor = 1f + branch.depth * 0.75f;
 
         float stiffness = springStiffness * depthFactor;
         float damping = springDamping * depthFactor;

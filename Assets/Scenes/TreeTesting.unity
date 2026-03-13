@@ -365,16 +365,16 @@ MonoBehaviour:
   initialLength: 1.75
   lengthScale: 0.75
   branchAngle: 30
-  branchWidth: 0.05
+  branchWidth: 0.075
   widthScaleByDepth: 0.8
   randomizeSeed: 0
-  seed: 1337
-  angleNoiseScale: 25
-  lengthNoiseScale: 0.75
-  noiseFrequency: 0.5
-  leafClusters: 1
-  leafClusterMin: 2
-  leafClusterMax: 3
+  seed: 5555
+  angleNoiseScale: 45
+  lengthNoiseScale: 0.1
+  noiseFrequency: 0.75
+  leafClusters: 0
+  leafClusterMin: 4
+  leafClusterMax: 8
   leafClusterRadius: 0.15
   springStiffness: 20
   springDamping: 5
