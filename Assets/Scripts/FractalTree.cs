@@ -71,18 +71,18 @@ public class FractalTree : MonoBehaviour
     [HideInInspector] public float depthAmplitudeScale = 0.8f; // How amplitude decreases per depth
 
     [Header("Scalar Noise Fields")]
-    [HideInInspector] public Vector2 windDirection = new Vector2(1f, 0f); // Direction of the noise field "wind"
-    [HideInInspector] public float noiseAmplitude = 2f; // Base amplitude of the noise effect on angles
+    [HideInInspector] public Vector2 windDirection = new Vector2(1f, 0.2f); // Direction of the noise field "wind"
+    [HideInInspector] public float noiseAmplitude = 3f; // Base amplitude of the noise effect on angles
     [HideInInspector] public float scalarWindDepthScale = 0.8f; // Decrease per depth
-    [HideInInspector] public float windSpatialFrequency = 0.5f; // How quickly the noise changes across space
+    [HideInInspector] public float windSpatialFrequency = 0.6f; // How quickly the noise changes across space
     [HideInInspector] public float windSpeed = 0.5f; // How quickly the noise field changes over time
     [HideInInspector] public float windStrength = 5f; // How strongly the noise field affects branch angles
 
     [Header("Vector Fields")]
-    [HideInInspector] public float vectorWindAmplitude = 1f; // Base amplitude
+    [HideInInspector] public float vectorWindAmplitude = 1.5f; // Base amplitude
     [HideInInspector] public float vectorWindDepthScale = 0.8f; // Decrease per depth
-    [HideInInspector] public float vectorWindSpatialFrequency = 0.5f; // How quickly the noise changes across space
-    [HideInInspector] public float vectorWindSpeed = 0.5f; // How quickly the noise changes across space
+    [HideInInspector] public float vectorWindSpatialFrequency = 0.7f; // How quickly the noise changes across space
+    [HideInInspector] public float vectorWindSpeed = 0.6f; // How quickly the noise changes across space
 
     // Array variables to send to shader for SDF approach. Define max branches to prevent overflow. Define list for leaves.
     const int MAX_BRANCHES = 512;

@@ -25,7 +25,6 @@ Shader "Custom/SDFTree"
 
         Pass
         {
-            Blend One Zero
             ZWrite On
             ZTest LEqual
 
@@ -163,7 +162,7 @@ Shader "Custom/SDFTree"
                 float dy = min(sdTree(p + float2(0, eps)), sdLeaf(p + float2(0, eps))) - combinedDist;
 
                 // Surface normal is the gradient of the SDF
-                float2 normal2D = normalize(float2(dx, dy));
+                float2 normal2D = normalize(float2(dx, dy) + 1e-5);
 
                 // Convert normal to 3D
                 float3 normalWS = normalize(float3(normal2D, 0));
@@ -195,7 +194,9 @@ Shader "Custom/SDFTree"
                     float u = dot(relPos, branchDirection); // Along branch
                     float v = dot(relPos, branchNormal); // Across branch
 
-                    if (branchDist <= 0) // Check if we're within the branch capsule
+                    float d = sdCapsule(p, start, end, radius);
+
+                    if (d <= 0) // Check if we're within the branch capsule
                     { 
                         float2 branchUV;
 
@@ -244,7 +245,7 @@ Shader "Custom/SDFTree"
 
                 float3 finalColor = lerp(branchColor, leafColor, leafRegion);
 
-                return float4(finalColor * mask, mask);
+                return float4(finalColor, mask);
 
                 // Debug draw
                 // return float4(_LeafPositions[0].xy * 0.5 + 0.5, 0, 1);

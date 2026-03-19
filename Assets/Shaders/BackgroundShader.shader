@@ -81,14 +81,17 @@ Shader "Custom/BackgroundShader"
             {
                 float2 uv = IN.uv;
 
-                float t = _Time.y * 0.05;
+                float t = _Time.y * 0.1;
 
                 float n1 = noise(uv * _NoiseScale + t);
                 float n2 = noise(uv * (_NoiseScale * 0.5) - t * 0.5);
                 float n = (n1 + n2) * 0.5;
 
-                float warp = (n - 0.5) * 0.08;
-                float gradient = saturate(uv.y + warp);
+                float warp = (n - 0.5) * 0.2;
+                float gradient = saturate((uv.y + uv.x * 0.3) + warp);
+
+                // float bands = 12.0;
+                // gradient = floor(gradient * bands) / bands;
 
                 float4 color = lerp(_BottomColor, _TopColor, gradient);
 
