@@ -138,8 +138,6 @@ Shader "Custom/SDFTree"
             {
                 float2 p = IN.positionOS.xy * _TreeScale; // Scale the tree in 2D object space
 
-                // float2 uv = IN.positionOS.xy * 0.5 + 0.5;
-
                 float branchDist = sdTree(p);
                 float leafDist = sdLeaf(p); // Scale leaf distance separately
 
@@ -150,7 +148,7 @@ Shader "Custom/SDFTree"
                 float edgeWidth = fwidth(combinedDist) * _Edge;
                 float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, combinedDist);
 
-                if(mask <= 0.001)
+                if(mask < 0.01)
                 {
                     discard;
                 }
@@ -165,15 +163,16 @@ Shader "Custom/SDFTree"
                 float2 normal2D = normalize(float2(dx, dy) + 1e-5);
 
                 // Convert normal to 3D
-                float3 normalWS = normalize(float3(normal2D, 0));
+                float3 normalWS = normalize(float3(normal2D, 1));
 
                 // CEL SHADING
                 float ndotl = saturate(dot(normalWS, _LightDirection)); // Lambertian diffuse term
+                ndotl = max(ndotl, 0.0);
                 float cel = floor(ndotl * _Bands) / _Bands; // Quantize bands
 
-                cel = smoothstep(cel - 0.02, cel + 0.02, ndotl); // Soften edges between bands
+                cel = smoothstep(-0.02, 0.02, ndotl); // Soften edges between bands
 
-               float3 lighting = lerp(_ShadowColor.rgb, _LightColor.rgb, cel); // Interpolate between shadow and light color based on cel shading
+                float3 lighting = lerp(_ShadowColor.rgb, _LightColor.rgb, cel); // Interpolate between shadow and light color based on cel shading
 
                 float3 branchColor = (0, 0, 0); 
                 // Loop through branches, check if they influence this pixel, and compute UVs
@@ -207,9 +206,8 @@ Shader "Custom/SDFTree"
 
                         float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, branchUV); // Adjust UV scale as needed
 
-                        float edge = fwidth(v);
-                        float alpha = 1.0 - smoothstep(radius - edge, radius, abs(v)); // Soft edge for branches
-                        branchColor = lerp(branchColor, branchTexColor.rgb * _BranchColor.rgb * lighting, alpha); // Interpolate between branch color and cel color based on alpha
+                        // float alpha = 1.0;
+                        branchColor = branchTexColor.rgb * _BranchColor.rgb * lighting;
                     }
                 }
 
@@ -228,7 +226,7 @@ Shader "Custom/SDFTree"
                     float d = length(offset) - leafRadius;
 
                     // Check if we're in the region of this leaf
-                    if(d <= leafRadius)
+                    if(d <= 0.0)
                     {
                         // Sample leaf texture with UVs based on distance to leaf center
                         float2 leafUV = offset / leafRadius * 0.5 + 0.5; // Scale UVs to fit the leaf
@@ -236,10 +234,9 @@ Shader "Custom/SDFTree"
                         leafUV = saturate(leafUV);
 
                         float4 leafTex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, leafUV);
-                        float edge = fwidth(length(offset));
-                        float alpha = 1.0 - smoothstep(leafRadius - edge, leafRadius, length(offset)); // Soft edge for leaves
 
-                        leafColor = lerp(leafColor, leafTex.rgb * _LeafColor.rgb * lighting, alpha); // Interpolate between leaf color and cel color based on alpha
+                        // float alpha = 1.0;
+                        leafColor = leafTex.rgb * _LeafColor.rgb * lighting;
                     }
                 }
 

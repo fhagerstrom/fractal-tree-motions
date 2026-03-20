@@ -302,7 +302,7 @@ public class FractalTree : MonoBehaviour
             // Draw leaves in clusters depending on bool
             if(leafClusters)
             {
-                int clusterSize = Random.Range(leafClusterMin, leafClusterMax + 1); // Random number of leaves per cluster
+                int clusterSize = Random.Range(leafClusterMin, leafClusterMax); // Random number of leaves per cluster
 
                 for (int i = 0; i < clusterSize; i++)
                 {

@@ -41,9 +41,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Bands: 35
     - _EnableExternalAlpha: 0
     - _NoiseScale: 3
-    - _NoiseStrength: 0.8
+    - _NoiseStrength: 0.5
     - _ZWrite: 0
     m_Colors:
     - _BottomColor: {r: 0.9019608, g: 0.827451, b: 0.6392157, a: 1}

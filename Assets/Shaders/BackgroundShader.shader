@@ -6,6 +6,7 @@ Shader "Custom/BackgroundShader"
         _BottomColor("Bottom Color", Color) = (0.5, 0.7, 1.0, 1)
         _NoiseScale("Noise Scale", Float) = 2.0
         _NoiseStrength("Noise Strength", Float) = 0.25
+        _Bands("Bands", Float) = 30.0
 
     }
 
@@ -46,6 +47,7 @@ Shader "Custom/BackgroundShader"
                 float4 _BottomColor;
                 float _NoiseScale;
                 float _NoiseStrength;
+                float _Bands;
             CBUFFER_END
 
             // Hash function
@@ -90,8 +92,7 @@ Shader "Custom/BackgroundShader"
                 float warp = (n - 0.5) * 0.2;
                 float gradient = saturate((uv.y + uv.x * 0.3) + warp);
 
-                // float bands = 12.0;
-                // gradient = floor(gradient * bands) / bands;
+                gradient = floor(gradient * _Bands) / _Bands;
 
                 float4 color = lerp(_BottomColor, _TopColor, gradient);
 
