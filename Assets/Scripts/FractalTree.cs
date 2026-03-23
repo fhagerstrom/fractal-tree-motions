@@ -50,6 +50,15 @@ public class FractalTree : MonoBehaviour
     public float lengthNoiseScale = 0.5f;
     public float noiseFrequency = 1.0f;
 
+    [Header("Branch Bias")]
+    public bool useBranchBias = false;
+    [Range(-1, 1f)] public float biasStrength = 0.5f;
+
+    [Header("Dead Branches")]
+    public bool useDeadBranches = false;
+    [Range(0f, 1f)] public float deadBranchChance = 0.2f;
+    public int deadBranchMinDepth = 1;
+
     [Header("Leaves")]
     public bool leafClusters = true; // Draw leaves in clusters, or a single leaf per branch end.
     public int leafClusterMin = 3; // Minimum number of leaves in a cluster
@@ -165,6 +174,13 @@ public class FractalTree : MonoBehaviour
         // DebugDrawBranch(root); // Debug draw the tree for visualization
     }
 
+    // Deterministic randomization
+    float Hash01(int seed, int depth, Vector2 pos)
+    {
+        float h = Mathf.Sin(Vector3.Dot(new Vector3(pos.x, pos.y, depth), new Vector3(13f, 78.25f, 38f))) * 43758.5453f;
+        return h - Mathf.Floor(h + seed * 0.001f);
+    }
+
     public void RegenerateTree()
     {
         if (randomizeSeed == true)
@@ -257,6 +273,9 @@ public class FractalTree : MonoBehaviour
     // Recursive function to generate the tree branches
     TreeBranch GenerateBranch(TreeBranch parent, Vector2 start, float angle, int depth)
     {
+        float bias = 0f;
+        // bool isDead = false;
+
         // Length noise
         float baseLength = initialLength * Mathf.Pow(lengthScale, depth);
 
@@ -288,10 +307,24 @@ public class FractalTree : MonoBehaviour
 
         if (depth < maxDepth) // As long as we haven't reached the maximum depth, recursively create child branches
         {
+            // If we want left / right bias
+            if (useBranchBias)
+            {
+                float rand = Hash01(seed, depth, start);
+                bias = (rand - 0.5f) * 2f * biasStrength; // [-biasStrength, biasStrength] -1, 1
+            }
+
+            //// If we want dead branches
+            //if (useDeadBranches && depth >= deadBranchMinDepth)
+            //{
+            //    float rand = Hash01(seed + 100, depth, start);
+            //    isDead = rand < deadBranchChance;
+            //}
+
             float offset = branchAngle * Mathf.Deg2Rad;
 
-            TreeBranch left = GenerateBranch(branch, branch.end, finalAngle + offset, depth + 1);
-            TreeBranch right = GenerateBranch(branch, branch.end, finalAngle - offset, depth + 1);
+            TreeBranch left = GenerateBranch(branch, branch.end, finalAngle + offset * (1f + bias), depth + 1);
+            TreeBranch right = GenerateBranch(branch, branch.end, finalAngle - offset * (1f - bias), depth + 1);
 
             branch.childBranches.Add(left);
             branch.childBranches.Add(right);
