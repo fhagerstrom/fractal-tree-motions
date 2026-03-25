@@ -361,19 +361,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
   currentWindModel: 2
   treePosition: {x: 0, y: -2}
-  maxDepth: 5
+  maxDepth: 6
   initialLength: 1.5
-  lengthScale: 0.6
+  lengthScale: 0.7
   branchAngle: 32
-  branchWidth: 0.07
+  branchWidth: 0.08
   widthScaleByDepth: 0.6
   randomizeSeed: 0
   seed: 1337
-  angleNoiseScale: 45
+  angleNoiseScale: 14
   lengthNoiseScale: 0.2
-  noiseFrequency: 0.4
+  noiseFrequency: 1.2
   useBranchBias: 1
-  biasStrength: 0.3
+  biasStrength: -0.15
   useDeadBranches: 1
   deadBranchChance: 1
   deadBranchMinDepth: 2

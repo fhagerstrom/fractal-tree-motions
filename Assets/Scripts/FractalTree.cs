@@ -430,8 +430,7 @@ public class FractalTree : MonoBehaviour
         float phase = branch.depth * 0.3f;
         float offset = ampRadius * Mathf.Sin(Time.time * swayFrequency * 2f * Mathf.PI + phase);
 
-        // Add stiffness to trunk
-        float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
+        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
         // offset *= stiffness;
 
         // Apply gusts as a multiplier to wind offset
@@ -473,8 +472,7 @@ public class FractalTree : MonoBehaviour
 
         float centered = noiseValue * 2f - 1f; // Center around 0
 
-        // Add stiffness to trunk
-        float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
+        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
 
         offset = centered * ampRadius * windStrength;
         //offset *= stiffness;
@@ -513,7 +511,7 @@ public class FractalTree : MonoBehaviour
 
         float ampRadius = vectorWindAmplitude * Mathf.Pow(vectorWindDepthScale, branch.depth) * Mathf.Deg2Rad; // Base amplitude scaled by depth
 
-        Vector2 branchDirection = (branch.end - branch.start).normalized; // Define direction
+        Vector2 branchDirection = (branch.end - branch.start).normalized;
         Vector2 branchNormal = new Vector2(-branchDirection.y, branchDirection.x); // Make sure it's perpendicular
 
         // Sample vector wind field at branch position
@@ -522,8 +520,7 @@ public class FractalTree : MonoBehaviour
         // Project wind onto normal for bending
         float bend = Vector2.Dot(vectorWind, branchNormal);
 
-        // Add stiffness to trunk
-        float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
+        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
 
         offset = bend * ampRadius;
         //offset *= stiffness;
