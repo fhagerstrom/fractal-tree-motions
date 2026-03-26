@@ -363,23 +363,23 @@ MonoBehaviour:
   treePosition: {x: 0, y: -2}
   maxDepth: 6
   initialLength: 1.5
-  lengthScale: 0.7
-  branchAngle: 32
-  branchWidth: 0.08
-  widthScaleByDepth: 0.6
+  lengthScale: 0.75
+  branchAngle: 35
+  branchWidth: 0.1
+  widthScaleByDepth: 0.75
   randomizeSeed: 0
   seed: 1337
-  angleNoiseScale: 14
+  angleNoiseScale: 18
   lengthNoiseScale: 0.2
   noiseFrequency: 1.2
   useBranchBias: 1
-  biasStrength: -0.15
+  biasStrength: 0.15
   useDeadBranches: 1
   deadBranchChance: 1
   deadBranchMinDepth: 2
   leafClusters: 1
-  leafClusterMin: 3
-  leafClusterMax: 6
+  leafClusterMin: 4
+  leafClusterMax: 8
   leafClusterRadius: 0.15
   springStiffness: 15
   springDamping: 5
@@ -393,7 +393,7 @@ MonoBehaviour:
   scalarWindDepthScale: 0.8
   windSpatialFrequency: 0.6
   windSpeed: 0.5
-  windStrength: 5
+  windStrength: 3
   vectorWindAmplitude: 1.5
   vectorWindDepthScale: 0.8
   vectorWindSpatialFrequency: 0.7

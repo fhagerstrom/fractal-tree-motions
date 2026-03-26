@@ -25,6 +25,7 @@ Shader "Custom/SDFTree"
 
         Pass
         {
+            Blend One Zero
             ZWrite On
             ZTest LEqual
 
@@ -134,30 +135,86 @@ Shader "Custom/SDFTree"
                 return leafDist;
             }
 
+            struct SDFResult
+            {
+                float dist;
+                int type; // 0 = branch, 1 = leaf
+                int index; // Which branch / leaf
+            };
+
+            SDFResult EvaluateTree(float2 p)
+            {
+                SDFResult res;
+                res.dist = 1e5;
+                res.type = 0;
+                res.index = 0;
+
+                // Branches
+                for (int i = 0; i < _BranchCount; i++)
+                {
+                    float2 start = _BranchDataA[i].xy;
+                    float2 end = _BranchDataA[i].zw;
+                    float radius = _BranchDataB[i].x;
+                    
+                    float d = sdCapsule(p, start, end, radius);
+
+                    if (d < res.dist)
+                    {
+                        res.dist = d;
+                        res.type = 0;
+                        res.index = i;
+                    }
+                }
+
+                // Leaves
+                for (int i = 0; i < _LeafCount; i++)
+                {
+                    float2 leafPos = _LeafPositions[i].xy;
+                    float leafRadius = _LeafPositions[i].z * _LeafScale;
+
+                    float d = length(p - leafPos) - leafRadius;
+
+                    if (d < res.dist)
+                    {
+                        res.dist = d;
+                        res.type = 1;
+                        res.index = i;
+                    }
+                }
+
+                return res;
+            }
+
             half4 frag(Varyings IN) : SV_Target
             {
                 float2 p = IN.positionOS.xy * _TreeScale; // Scale the tree in 2D object space
 
-                float branchDist = sdTree(p);
-                float leafDist = sdLeaf(p); // Scale leaf distance separately
+                // float branchDist = sdTree(p);
+                // float leafDist = sdLeaf(p); // Scale leaf distance separately
+
+                SDFResult tree = EvaluateTree(p);
+                float combinedDist = tree.dist;
 
                 // Combine branch and leaf SDFs
-                float combinedDist = min(branchDist, leafDist);
+                // float combinedDist = min(branchDist, leafDist);
 
                 // Branch edge mask
-                float edgeWidth = fwidth(combinedDist) * _Edge;
+                float edgeWidth = 0.01 * _Edge;
                 float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, combinedDist);
 
-                if(mask < 0.01)
+                if (mask < 0.01)
                 {
                     discard;
                 }
 
-                float eps = fwidth(combinedDist); // Epsilon - Small offset for gradient estimation
+                float eps = 0.001; // fwidth(combinedDist); // Epsilon - Small offset for gradient estimation
 
                 // Sample SDFs around current point
-                float dx = min(sdTree(p + float2(eps, 0)), sdLeaf(p + float2(eps, 0))) - combinedDist;
-                float dy = min(sdTree(p + float2(0, eps)), sdLeaf(p + float2(0, eps))) - combinedDist;
+                float dx = EvaluateTree(p + float2(eps, 0)).dist - combinedDist;
+                float dy = EvaluateTree(p + float2(0, eps)).dist - combinedDist;
+
+                // float dx = min(sdTree(p + float2(eps, 0)), sdLeaf(p + float2(eps, 0))) - combinedDist;
+                // float dy = min(sdTree(p + float2(0, eps)), sdLeaf(p + float2(0, eps))) - combinedDist;
 
                 // Surface normal is the gradient of the SDF
                 float2 normal2D = normalize(float2(dx, dy) + 1e-5);
@@ -174,75 +231,123 @@ Shader "Custom/SDFTree"
 
                 float3 lighting = lerp(_ShadowColor.rgb, _LightColor.rgb, cel); // Interpolate between shadow and light color based on cel shading
 
-                float3 branchColor = (0, 0, 0); 
-                // Loop through branches, check if they influence this pixel, and compute UVs
-                for (int i = 0; i < _BranchCount; i++)
+                float3 treeColor = (0, 0, 0);
+
+                if (tree.type == 0) // branch
                 {
+                    int i = tree.index;
+
                     float2 start = _BranchDataA[i].xy;
-                    float2 end = _BranchDataA[i].zw;
+                    float2 end   = _BranchDataA[i].zw;
                     float radius = _BranchDataB[i].x;
 
                     float2 branchVector = end - start;
                     float branchLength = length(branchVector);
 
-                    float2 branchDirection = branchVector / branchLength; // Normalize to get direction
-                    float2 branchNormal = float2(-branchDirection.y, branchDirection.x); // Perpendicular to branch direction
+                    float2 dir = branchVector / branchLength;
+                    float2 normal = float2(-dir.y, dir.x);
 
                     float2 relPos = p - start;
 
-                    float u = dot(relPos, branchDirection); // Along branch
-                    float v = dot(relPos, branchNormal); // Across branch
+                    float u = dot(relPos, dir);
+                    float v = dot(relPos, normal);
 
-                    float d = sdCapsule(p, start, end, radius);
+                    float2 uv;
+                    uv.x = u / branchLength;
+                    uv.y = v / radius * 0.5 + 0.5;
+                    uv = saturate(uv);
 
-                    if (d <= 0) // Check if we're within the branch capsule
-                    { 
-                        float2 branchUV;
-
-                        branchUV.x = u / branchLength; // Normalize u to [0, 1] along the branch
-                        branchUV.y = v / radius * 0.5 + 0.5; 
-
-                        branchUV = saturate(branchUV);
-
-                        float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, branchUV); // Adjust UV scale as needed
-
-                        // float alpha = 1.0;
-                        branchColor = branchTexColor.rgb * _BranchColor.rgb * lighting;
-                    }
+                    float4 tex = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, uv);
+                    treeColor = tex.rgb * _BranchColor.rgb;
                 }
 
-                // Leaves
-                float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
-                
-                // Loop through leaves, check if they influence this pixel, and compute UVs
-                float3 leafColor = (0, 0, 0);
-                for(int i = 0; i < _LeafCount; i++)
+                else if (tree.type == 1) // Leaf
                 {
+                    int i = tree.index;
+
                     float2 leafPos = _LeafPositions[i].xy;
                     float leafRadius = _LeafPositions[i].z * _LeafScale;
 
                     float2 offset = p - leafPos;
+                    float2 uv = offset / leafRadius * 0.5 + 0.5;
+                    uv = saturate(uv);
 
-                    float d = length(offset) - leafRadius;
-
-                    // Check if we're in the region of this leaf
-                    if(d <= 0.0)
-                    {
-                        // Sample leaf texture with UVs based on distance to leaf center
-                        float2 leafUV = offset / leafRadius * 0.5 + 0.5; // Scale UVs to fit the leaf
-
-                        leafUV = saturate(leafUV);
-
-                        float4 leafTex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, leafUV);
-
-                        // float alpha = 1.0;
-                        leafColor = leafTex.rgb * _LeafColor.rgb * lighting;
-                    }
+                    float4 tex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, uv);
+                    treeColor = tex.rgb * _LeafColor.rgb;
                 }
 
-                float3 finalColor = lerp(branchColor, leafColor, leafRegion);
-
+                float3 finalColor = treeColor * lighting;
+                
                 return float4(finalColor, mask);
+
+                /* OLD CODE */
+                // Loop through branches, check if they influence this pixel, and compute UVs
+                // for (int i = 0; i < _BranchCount; i++)
+                // {
+                //     float2 start = _BranchDataA[i].xy;
+                //     float2 end = _BranchDataA[i].zw;
+                //     float radius = _BranchDataB[i].x;
+
+                //     float2 branchVector = end - start;
+                //     float branchLength = length(branchVector);
+
+                //     float2 branchDirection = branchVector / branchLength; // Normalize to get direction
+                //     float2 branchNormal = float2(-branchDirection.y, branchDirection.x); // Perpendicular to branch direction
+
+                //     float2 relPos = p - start;
+
+                //     float u = dot(relPos, branchDirection); // Along branch
+                //     float v = dot(relPos, branchNormal); // Across branch
+
+                //     float d = sdCapsule(p, start, end, radius);
+
+                //     if (d <= 0) // Check if we're within the branch capsule
+                //     { 
+                //         float2 branchUV;
+
+                //         branchUV.x = u / branchLength; // Normalize u to [0, 1] along the branch
+                //         branchUV.y = v / radius * 0.5 + 0.5; 
+
+                //         branchUV = saturate(branchUV);
+
+                //         float4 branchTexColor = SAMPLE_TEXTURE2D(_MainTexture, sampler_MainTexture, branchUV); // Adjust UV scale as needed
+
+                //         // float alpha = 1.0;
+                //         branchColor = branchTexColor.rgb * _BranchColor.rgb * lighting;
+                //     }
+                // }
+
+                // // Leaves
+                // float leafRegion = step(leafDist, branchDist); // 1 in leaf region, 0 in branch region
+                
+                // // Loop through leaves, check if they influence this pixel, and compute UVs
+                // float3 leafColor = (0, 0, 0);
+                // for(int i = 0; i < _LeafCount; i++)
+                // {
+                //     float2 leafPos = _LeafPositions[i].xy;
+                //     float leafRadius = _LeafPositions[i].z * _LeafScale;
+
+                //     float2 offset = p - leafPos;
+
+                //     float d = length(offset) - leafRadius;
+
+                //     // Check if we're in the region of this leaf
+                //     if(d <= 0.0)
+                //     {
+                //         // Sample leaf texture with UVs based on distance to leaf center
+                //         float2 leafUV = offset / leafRadius * 0.5 + 0.5; // Scale UVs to fit the leaf
+
+                //         leafUV = saturate(leafUV);
+
+                //         float4 leafTex = SAMPLE_TEXTURE2D(_LeafTexture, sampler_LeafTexture, leafUV);
+
+                //         // float alpha = 1.0;
+                //         leafColor = leafTex.rgb * _LeafColor.rgb * lighting;
+                //     }
+                // }
+
+                // float3 finalColor = lerp(branchColor, leafColor, leafRegion);
+
 
                 // Debug draw
                 // return float4(_LeafPositions[0].xy * 0.5 + 0.5, 0, 1);
