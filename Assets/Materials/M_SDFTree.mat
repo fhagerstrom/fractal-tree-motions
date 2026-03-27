@@ -36,15 +36,17 @@ Material:
     - _Bands: 1
     - _Edge: 0.01
     - _LeafScale: 1.5
+    - _OutlineThickness: 0.02
     - _Radius: 1
-    - _TreeScale: 15
+    - _TreeScale: 10
     m_Colors:
-    - _BranchColor: {r: 0.8392157, g: 0.8392157, b: 0.8392157, a: 1}
+    - _BranchColor: {r: 0.4, g: 0.2, b: 0, a: 1}
     - _Center: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 0.8396226, g: 0.8396226, b: 0.8396226, a: 1}
-    - _LeafColor: {r: 1, g: 0.7529412, b: 0.79607844, a: 1}
+    - _LeafColor: {r: 0.6, g: 0.4, b: 0.2, a: 1}
     - _LightColor: {r: 1, g: 1, b: 1, a: 1}
     - _LightDirection: {r: -0.5, g: 0.3, b: 0, a: 0}
-    - _ShadowColor: {r: 0.3301887, g: 0.3301887, b: 0.3301887, a: 1}
+    - _OutlineColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    - _ShadowColor: {r: 0.2264151, g: 0.2264151, b: 0.2264151, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

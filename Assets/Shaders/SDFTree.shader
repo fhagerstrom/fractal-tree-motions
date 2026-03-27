@@ -4,14 +4,16 @@ Shader "Custom/SDFTree"
     {
         _TreeScale("Tree Scale", Float) = 1.0
         _LeafScale("Leaf Scale", Float) = 1.0
+        _LightDirection("Light Direction", Vector) = (0.4, 0.8, 0.0, 0)
+        _LightColor("Light Color", Color) = (1, 1, 1, 1)
         _MainTexture("Tree Texture", 2D) = "white" {}
         _LeafTexture("Leaf Texture", 2D) = "white" {}
         _BranchColor("Tree Color", Color) = (0, 0.5, 0, 1)
         _LeafColor("Leaf Color", Color) = (0.8, 0.6, 0.6, 1)
         _ShadowColor("Shadow Color", Color) = (0.05, 0.05, 0.05, 1)
-        _LightDirection("Light Direction", Vector) = (0.4, 0.8, 0.0, 0)
-        _LightColor("Light Color", Color) = (1, 1, 1, 1)
         _Bands("Cel Shading Bands", Float) = 3.0
+        _OutlineThickness("Outline Thickness", Float) = 0.05
+        _OutlineColor("Outline Color", Color) = (0.1, 0.1, 0.1, 1)
         _Edge("Edge", Float) = 0.01
 
         // CIRCLE SHAPE TESTING
@@ -67,6 +69,8 @@ Shader "Custom/SDFTree"
                 float _TreeScale;
                 float _LeafScale;
                 float3 _LightDirection;
+                float _OutlineThickness;
+                float3 _OutlineColor;
 
             CBUFFER_END
             
@@ -99,41 +103,41 @@ Shader "Custom/SDFTree"
                 return length(pa - ba * height) - radius; // Distance from point to capsule surface
             }
 
-            float sdTree(float2 pos)
-            {
-                float minDist = 1e5; // Start with a large distance, will be reduced by checking each branch
+            // float sdTree(float2 pos)
+            // {
+            //     float minDist = 1e5; // Start with a large distance, will be reduced by checking each branch
 
-                float2 start;
-                float2 end;
-                float radius;
+            //     float2 start;
+            //     float2 end;
+            //     float radius;
 
-                // Loop through all branches and find the minimum distance to any branch
-                for(int i = 0; i < _BranchCount; i++)
-                {
-                    start = _BranchDataA[i].xy;
-                    end = _BranchDataA[i].zw;
-                    radius = _BranchDataB[i].x;
+            //     // Loop through all branches and find the minimum distance to any branch
+            //     for(int i = 0; i < _BranchCount; i++)
+            //     {
+            //         start = _BranchDataA[i].xy;
+            //         end = _BranchDataA[i].zw;
+            //         radius = _BranchDataB[i].x;
 
-                    float d = sdCapsule(pos, start, end, radius); // Distance from point to current branch
-                    minDist = min(minDist, d); // Update minimum distance if this branch is closer
-                }
+            //         float d = sdCapsule(pos, start, end, radius); // Distance from point to current branch
+            //         minDist = min(minDist, d); // Update minimum distance if this branch is closer
+            //     }
 
-                return minDist;
-            }
+            //     return minDist;
+            // }
 
-            float sdLeaf(float2 pos)
-            {
-                float leafDist = 1e5; // Start with a large distance
-                // Loop through all leaves and find the minimum distance to any leaf
-                for (int i = 0; i < _LeafCount; i++)
-                {
-                    float2 leafPos = _LeafPositions[i].xy;
-                    float leafRadius = _LeafPositions[i].z * _LeafScale;
-                    leafDist = min(leafDist, length(pos - leafPos) - leafRadius); // Distance from point to current leaf (circle) and update minimum distance
-                }
+            // float sdLeaf(float2 pos)
+            // {
+            //     float leafDist = 1e5; // Start with a large distance
+            //     // Loop through all leaves and find the minimum distance to any leaf
+            //     for (int i = 0; i < _LeafCount; i++)
+            //     {
+            //         float2 leafPos = _LeafPositions[i].xy;
+            //         float leafRadius = _LeafPositions[i].z * _LeafScale;
+            //         leafDist = min(leafDist, length(pos - leafPos) - leafRadius); // Distance from point to current leaf (circle) and update minimum distance
+            //     }
 
-                return leafDist;
-            }
+            //     return leafDist;
+            // }
 
             struct SDFResult
             {
@@ -198,6 +202,10 @@ Shader "Custom/SDFTree"
                 // Combine branch and leaf SDFs
                 // float combinedDist = min(branchDist, leafDist);
 
+                // Outlines
+                float outlineMask = step(abs(combinedDist), _OutlineThickness * 0.5);
+                outlineMask = saturate(outlineMask);
+
                 // Branch edge mask
                 float edgeWidth = 0.01 * _Edge;
                 float mask = 1.0 - smoothstep(-edgeWidth, edgeWidth, combinedDist);
@@ -207,7 +215,7 @@ Shader "Custom/SDFTree"
                     discard;
                 }
 
-                float eps = 0.001; // fwidth(combinedDist); // Epsilon - Small offset for gradient estimation
+                float eps = 0.001; // Epsilon - Small offset for gradient estimation
 
                 // Sample SDFs around current point
                 float dx = EvaluateTree(p + float2(eps, 0)).dist - combinedDist;
@@ -277,6 +285,9 @@ Shader "Custom/SDFTree"
                 }
 
                 float3 finalColor = treeColor * lighting;
+
+                // Mix outline
+                finalColor  = lerp(finalColor, _OutlineColor.rgb, outlineMask);
                 
                 return float4(finalColor, mask);
 
