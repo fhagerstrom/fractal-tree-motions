@@ -359,45 +359,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abe69896ada2fda44910ed42b12b2c7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
-  currentWindModel: 1
+  currentWindModel: 2
   treePosition: {x: 0, y: -2}
   maxDepth: 4
   initialLength: 1.5
-  lengthScale: 0.65
+  lengthScale: 0.6
   branchAngle: 45
-  branchWidth: 0.05
+  branchWidth: 0.06
   widthScaleByDepth: 0.7
   randomizeSeed: 0
   seed: 1337
-  angleNoiseScale: 60
-  lengthNoiseScale: 0.1
+  angleNoiseScale: 50
+  lengthNoiseScale: 0.3
   noiseFrequency: 1
   useBranchBias: 1
-  biasStrength: -0.1
+  biasStrength: -0.15
   useDeadBranches: 0
   deadBranchChance: 1
   deadBranchMinDepth: 2
   leafClusters: 0
   leafClusterMin: 3
-  leafClusterMax: 4
+  leafClusterMax: 6
   leafClusterRadius: 0.15
-  springStiffness: 12
-  springDamping: 2
+  springStiffness: 25
+  springDamping: 5
   gustStrength: 1.5
   gustFrequency: 0.1
   sineAmplitude: 2
   swayFrequency: 0.1
-  depthAmplitudeScale: 0.7
+  depthAmplitudeScale: 0.8
   windDirection: {x: 1, y: 0.2}
   noiseAmplitude: 3
   scalarWindDepthScale: 0.8
-  windSpatialFrequency: 0.6
-  windSpeed: 0.5
+  windSpatialFrequency: 0.8
+  windSpeed: 0.8
   windStrength: 3
   vectorWindAmplitude: 1.75
   vectorWindDepthScale: 0.7
-  vectorWindSpatialFrequency: 0.7
   vectorWindSpeed: 0.6
+  vectorWindSpatialFrequency: 0.7
 --- !u!1 &363476036
 GameObject:
   m_ObjectHideFlags: 0
@@ -579,8 +579,8 @@ MonoBehaviour:
   windStrength: 2
   vectorWindAmplitude: 1.5
   vectorWindDepthScale: 0.25
-  vectorWindSpatialFrequency: 0.75
   vectorWindSpeed: 0.75
+  vectorWindSpatialFrequency: 0.75
 --- !u!4 &468283343
 Transform:
   m_ObjectHideFlags: 0

@@ -63,7 +63,7 @@ public class FractalTree : MonoBehaviour
     public bool leafClusters = true; // Draw leaves in clusters, or a single leaf per branch end.
     public int leafClusterMin = 3; // Minimum number of leaves in a cluster
     public int leafClusterMax = 6; // Maximum number of leaves in a cluster
-    [HideInInspector] public float leafClusterRadius = 0.15f;
+    [HideInInspector] public float leafClusterRadius = 0.05f;
 
     [Header("Spring Dynamics")]
     public float springStiffness = 15f; // How strongly branches return to their base angle after displacement
@@ -90,8 +90,8 @@ public class FractalTree : MonoBehaviour
     [Header("Vector Fields")]
     [HideInInspector] public float vectorWindAmplitude = 1.5f; // Base amplitude
     [HideInInspector] public float vectorWindDepthScale = 0.8f; // Decrease per depth
+    [HideInInspector] public float vectorWindSpeed = 0.6f; // Wind animation speed
     [HideInInspector] public float vectorWindSpatialFrequency = 0.7f; // How quickly the noise changes across space
-    [HideInInspector] public float vectorWindSpeed = 0.6f; // How quickly the noise changes across space
 
     // Array variables to send to shader for SDF approach. Define max branches to prevent overflow. Define list for leaves.
     const int MAX_BRANCHES = 512;
@@ -339,7 +339,7 @@ public class FractalTree : MonoBehaviour
 
                 for (int i = 0; i < clusterSize; i++)
                 {
-                    branch.leafOffsets.Add(Random.insideUnitCircle * leafClusterRadius);
+                    branch.leafOffsets.Add(Random.insideUnitCircle * leafClusterRadius * 0.5f);
                 }
             }
 
@@ -687,8 +687,8 @@ public class TreeEditor : Editor
             case WindModel.VectorField:
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("vectorWindAmplitude"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("vectorWindDepthScale"));
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("vectorWindSpatialFrequency"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("vectorWindSpeed"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("vectorWindSpatialFrequency"));
                 break;
         }
 

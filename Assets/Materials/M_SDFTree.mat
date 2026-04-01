@@ -35,7 +35,7 @@ Material:
     m_Floats:
     - _Bands: 1
     - _Edge: 0.01
-    - _LeafScale: 1.5
+    - _LeafScale: 1
     - _OutlineThickness: 0.02
     - _Radius: 1
     - _TreeScale: 10
