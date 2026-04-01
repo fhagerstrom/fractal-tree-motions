@@ -406,7 +406,7 @@ public class FractalTree : MonoBehaviour
         float depthFactor = 1f + branch.depth * 0.75f;
 
         float stiffness = springStiffness * depthFactor;
-        float damping = springDamping * depthFactor;
+        float damping = springDamping;
 
         float dt = Time.deltaTime;
         float displacement = targetOffset - branch.angleOffset; // How far we are from the target offset
@@ -425,13 +425,13 @@ public class FractalTree : MonoBehaviour
             return;
 
         // amplitude decreases with depth
-        float ampRadius = sineAmplitude * Mathf.Pow(depthAmplitudeScale, branch.depth) * Mathf.Deg2Rad;
+        float ampRadius = sineAmplitude * Mathf.Pow(depthAmplitudeScale, branch.depth * 0.5f) * Mathf.Deg2Rad;
         // phase can vary by depth to produce cascading motion
         float phase = branch.depth * 0.3f;
         float offset = ampRadius * Mathf.Sin(Time.time * swayFrequency * 2f * Mathf.PI + phase);
 
-        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
-        // offset *= stiffness;
+        float stiffness = 1f - Mathf.Exp(-branch.depth * 0.5f);
+        offset *= Mathf.Lerp(0.3f, 1f, stiffness);
 
         // Apply gusts as a multiplier to wind offset
         float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
@@ -442,7 +442,7 @@ public class FractalTree : MonoBehaviour
         if (branch.parentBranch != null)
         {
             // Inherit some of the parent's sway for more natural motion
-            offset += (branch.parentBranch.angleOffset) * 0.6f;
+            offset += (branch.parentBranch.angleOffset) * 0.85f;
         }
 
         ApplySpring(branch, offset);
@@ -460,26 +460,29 @@ public class FractalTree : MonoBehaviour
         if (branch == null)
             return;
 
+        Vector2 direction = windDirection.normalized;
         float offset = 0f;
 
-        float ampRadius = noiseAmplitude * Mathf.Pow(scalarWindDepthScale, branch.depth) * Mathf.Deg2Rad; // Base amplitude scaled by depth
+        float ampRadius = noiseAmplitude * Mathf.Pow(scalarWindDepthScale, branch.depth * 0.5f) * Mathf.Deg2Rad; // Base amplitude scaled by depth
 
         // 1D noise based on branch position projected onto wind direction
-        Vector2 direction = windDirection.normalized; // Normalize the wind direction, ensure it's a unit vector
+        // Vector2 branchDirection = (branch.end - branch.start).normalized; // Normalize the wind direction, ensure it's a unit vector
         float projection = Vector2.Dot(branch.start, direction); // Project the branch's start position onto wind direction
         float coordinates = projection * windSpatialFrequency - Time.time * windSpeed; // Use projected coordinate to sample noise, time for animation
-        float noiseValue = Mathf.PerlinNoise(coordinates, 0);
 
+        float noiseValue = Mathf.PerlinNoise(coordinates, 0);
         float centered = noiseValue * 2f - 1f; // Center around 0
 
-        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
-
         offset = centered * ampRadius * windStrength;
-        //offset *= stiffness;
 
-        // Bend branches more if they are aligned with the wind direction, less if they are perpendicular
-        float windAlignment = Vector2.Dot(direction, windDirection);
-        offset *= windAlignment;
+        float stiffness = 1f - Mathf.Exp(-branch.depth * 0.5f);
+        offset *= Mathf.Lerp(0.3f, 1f, stiffness);
+
+        Vector2 branchDirection = (branch.end - branch.start).normalized;
+        Vector2 branchNormal = new Vector2(-branchDirection.y, branchDirection.x);
+
+        float bend = Vector2.Dot(direction, branchNormal);
+        offset *= Mathf.Abs(bend);
 
         // Apply gusts as a multiplier to wind offset
         float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
@@ -490,7 +493,7 @@ public class FractalTree : MonoBehaviour
         if (branch.parentBranch != null)
         {
             // Inherit some of the parent's sway for more natural motion
-            offset += (branch.parentBranch.angleOffset) * 0.6f;
+            offset += (branch.parentBranch.angleOffset) * 0.85f;
         }
 
         ApplySpring(branch, offset);
@@ -509,7 +512,7 @@ public class FractalTree : MonoBehaviour
 
         float offset = 0f;
 
-        float ampRadius = vectorWindAmplitude * Mathf.Pow(vectorWindDepthScale, branch.depth) * Mathf.Deg2Rad; // Base amplitude scaled by depth
+        float ampRadius = vectorWindAmplitude * Mathf.Pow(vectorWindDepthScale, branch.depth * 0.5f) * Mathf.Deg2Rad; // Base amplitude scaled by depth
 
         Vector2 branchDirection = (branch.end - branch.start).normalized;
         Vector2 branchNormal = new Vector2(-branchDirection.y, branchDirection.x); // Make sure it's perpendicular
@@ -520,10 +523,10 @@ public class FractalTree : MonoBehaviour
         // Project wind onto normal for bending
         float bend = Vector2.Dot(vectorWind, branchNormal);
 
-        // float stiffness = Mathf.InverseLerp(0, 2, branch.depth);
-
         offset = bend * ampRadius;
-        //offset *= stiffness;
+        
+        float stiffness = 1f - Mathf.Exp(-branch.depth * 0.5f);
+        offset *= Mathf.Lerp(0.3f, 1f, stiffness);
 
         // Apply gusts as a multiplier to wind offset
         float gust = Mathf.PerlinNoise(Time.time * gustFrequency, 0f);
@@ -534,7 +537,7 @@ public class FractalTree : MonoBehaviour
         if (branch.parentBranch != null)
         {
             // Inherit some of the parent's sway for more natural motion
-            offset += (branch.parentBranch.angleOffset) * 0.6f;
+            offset += (branch.parentBranch.angleOffset) * 0.85f;
         }
 
         ApplySpring(branch, offset);
