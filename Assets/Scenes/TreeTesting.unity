@@ -361,23 +361,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
   currentWindModel: 2
   treePosition: {x: 0, y: -2}
-  maxDepth: 4
+  maxDepth: 5
   initialLength: 1.5
-  lengthScale: 0.6
-  branchAngle: 45
-  branchWidth: 0.06
+  lengthScale: 0.65
+  branchAngle: 40
+  branchWidth: 0.1
   widthScaleByDepth: 0.7
   randomizeSeed: 0
   seed: 1337
-  angleNoiseScale: 50
-  lengthNoiseScale: 0.3
-  noiseFrequency: 1
+  angleNoiseScale: 30
+  lengthNoiseScale: 0.35
+  noiseFrequency: 0.25
   useBranchBias: 1
-  biasStrength: -0.15
+  biasStrength: 0.1
   useDeadBranches: 0
   deadBranchChance: 1
   deadBranchMinDepth: 2
-  leafClusters: 0
+  leafClusters: 1
   leafClusterMin: 3
   leafClusterMax: 6
   leafClusterRadius: 0.15
@@ -391,13 +391,13 @@ MonoBehaviour:
   windDirection: {x: 1, y: 0.2}
   noiseAmplitude: 3
   scalarWindDepthScale: 0.8
-  windSpatialFrequency: 0.8
-  windSpeed: 0.8
-  windStrength: 3
-  vectorWindAmplitude: 1.75
-  vectorWindDepthScale: 0.7
-  vectorWindSpeed: 0.6
-  vectorWindSpatialFrequency: 0.7
+  windSpatialFrequency: 0.4
+  windSpeed: 0.4
+  windStrength: 1
+  vectorWindAmplitude: 2.5
+  vectorWindDepthScale: 0.8
+  vectorWindSpeed: 0.4
+  vectorWindSpatialFrequency: 0.3
 --- !u!1 &363476036
 GameObject:
   m_ObjectHideFlags: 0
