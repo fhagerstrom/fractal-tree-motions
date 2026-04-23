@@ -169,9 +169,9 @@ public class FractalTree : MonoBehaviour
         leafCount = 0;
         UpdateLeafData(root);
         meshRenderer.sharedMaterial.SetInt("_LeafCount", leafCount);
-        meshRenderer.sharedMaterial.SetVectorArray("_LeafPositions", leafData); 
+        meshRenderer.sharedMaterial.SetVectorArray("_LeafPositions", leafData);
 
-        // DebugDrawBranch(root); // Debug draw the tree for visualization
+        DebugDrawBranch(root); // Debug draw the tree for visualization
     }
 
     // Deterministic randomization
@@ -564,19 +564,57 @@ public class FractalTree : MonoBehaviour
     }
 
 
-    // DEBUG DRAW FOR TESTING
+    // DEBUG DRAW FOR TESTING AND SHOWING REST AND DEFORMED POSES. For thesis figures.
 
     void DebugDrawBranch(TreeBranch branch)
     {
-        if (branch == null) 
+        if (branch == null)
             return;
 
-        Debug.DrawLine(branch.start, branch.end, Color.white);
+        float depthT = branch.depth / (float)maxDepth;
 
-        foreach(var child in branch.childBranches)
+        Color restColor = Color.Lerp(
+        new Color(0.25f, 0.18f, 0.12f), // dark brown (trunk)
+        new Color(0.55f, 0.45f, 0.35f), // light wood
+        depthT
+        );
+
+        // 1. base (rest pose)
+        Debug.DrawLine(branch.start, branch.end, restColor);
+
+        // 2. deformed (wind influence)
+        Vector2 deformedEnd = GetDeformedEnd(branch, Time.time);
+
+        Color windColor = Color.Lerp(
+        new Color(0.2f, 0.5f, 1f),   // deep blue
+        new Color(0.3f, 0.9f, 1f),   // cyan
+        depthT
+        );
+
+        Debug.DrawLine(branch.start, deformedEnd, windColor);
+
+        // 3. Displacement vector
+        Debug.DrawLine(branch.end, deformedEnd, Color.yellow);
+
+        foreach (var child in branch.childBranches)
         {
             DebugDrawBranch(child);
         }
+    }
+
+    Vector2 GetDeformedEnd(TreeBranch branch, float time)
+    {
+        float depthFactor = branch.depth / (float)maxDepth;
+
+        float amplitude = Mathf.Lerp(0.1f, 0.5f, depthFactor);
+
+        float wind = Mathf.Sin(time + branch.depth * 0.5f);
+
+        float angle = branch.baseAngle + wind * amplitude;
+
+        Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+
+        return branch.start + dir * branch.length;
     }
 
     void DebugVectorWind(TreeBranch branch, float scale)
@@ -620,8 +658,6 @@ public class FractalTree : MonoBehaviour
             DebugScalarWind(child, scale);
         }
     }
-
-
 }
 
 

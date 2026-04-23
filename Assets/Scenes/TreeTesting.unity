@@ -359,25 +359,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abe69896ada2fda44910ed42b12b2c7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FractalTree
-  currentWindModel: 2
+  currentWindModel: 0
   treePosition: {x: 0, y: -2}
-  maxDepth: 5
+  maxDepth: 4
   initialLength: 1.5
-  lengthScale: 0.65
-  branchAngle: 40
-  branchWidth: 0.1
+  lengthScale: 0.6
+  branchAngle: 45
+  branchWidth: 0.05
   widthScaleByDepth: 0.7
   randomizeSeed: 0
   seed: 1337
   angleNoiseScale: 30
-  lengthNoiseScale: 0.35
-  noiseFrequency: 0.25
+  lengthNoiseScale: 0.3
+  noiseFrequency: 1
   useBranchBias: 1
-  biasStrength: 0.1
+  biasStrength: -0.05
   useDeadBranches: 0
   deadBranchChance: 1
   deadBranchMinDepth: 2
-  leafClusters: 1
+  leafClusters: 0
   leafClusterMin: 3
   leafClusterMax: 6
   leafClusterRadius: 0.15
